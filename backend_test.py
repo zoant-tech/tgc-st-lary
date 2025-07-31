@@ -290,6 +290,45 @@ class TCGPocketAPITester:
                 print(f"   Rarity breakdown: {response['rarity_counts']}")
         return success
 
+    def test_collection_overview(self, collection_id):
+        """Test collection overview with missing cards display"""
+        success, response = self.run_test(
+            f"Get Collection Overview - {collection_id}",
+            "GET",
+            f"api/collection-overview/{collection_id}",
+            200
+        )
+        if success:
+            collection = response.get('collection', {})
+            complete_set = response.get('complete_set', [])
+            total_cards_in_set = response.get('total_cards_in_set', 0)
+            actual_cards_created = response.get('actual_cards_created', 0)
+            
+            print(f"   Collection: {collection.get('name', 'Unknown')}")
+            print(f"   Total cards in set: {total_cards_in_set}")
+            print(f"   Actual cards created: {actual_cards_created}")
+            print(f"   Complete set entries: {len(complete_set)}")
+            
+            # Test missing cards functionality
+            existing_cards = [item for item in complete_set if item.get('exists', False)]
+            missing_cards = [item for item in complete_set if not item.get('exists', False)]
+            
+            print(f"   Existing cards: {len(existing_cards)}")
+            print(f"   Missing cards: {len(missing_cards)}")
+            
+            # Verify card numbering
+            for item in complete_set[:5]:  # Show first 5 for brevity
+                card_num = item.get('card_number', 0)
+                exists = item.get('exists', False)
+                if exists:
+                    card_name = item.get('card', {}).get('name', 'Unknown')
+                    print(f"     Card #{card_num}: {card_name} ✅")
+                else:
+                    print(f"     Card #{card_num}: Missing ❌")
+            
+            return response
+        return None
+
 def main():
     print("🚀 Starting TCG Pocket Collection-Based API Tests")
     print("=" * 60)
