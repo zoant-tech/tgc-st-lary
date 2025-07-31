@@ -138,8 +138,8 @@ class TCGPocketAPITester:
             return response['collections']
         return []
 
-    def test_create_card(self, name, collection_id, rarity="Common", card_type="Pokemon"):
-        """Test card creation"""
+    def test_create_card(self, name, collection_id, card_number, rarity="Common", card_type="Pokemon"):
+        """Test card creation with card numbering"""
         test_image = self.create_test_image()
         
         card_data = {
@@ -147,6 +147,7 @@ class TCGPocketAPITester:
             'rarity': rarity,
             'card_type': card_type,
             'collection_id': collection_id,
+            'card_number': card_number,
             'hp': '100',
             'attack_1': 'Thunder Bolt',
             'attack_2': 'Lightning Strike',
@@ -161,7 +162,7 @@ class TCGPocketAPITester:
         }
         
         success, response = self.run_test(
-            f"Create Card - {name}",
+            f"Create Card - {name} (#{card_number})",
             "POST",
             "api/cards",
             200,
@@ -173,6 +174,7 @@ class TCGPocketAPITester:
             card_id = response['card']['id']
             self.created_cards.append(card_id)
             print(f"   Created card ID: {card_id}")
+            print(f"   Card number: {card_number}")
             return card_id
         return None
 
