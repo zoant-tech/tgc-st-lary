@@ -33,6 +33,7 @@ db = client[db_name]
 cards_collection = db.cards
 packs_collection = db.booster_packs
 users_collection = db.users
+user_collections_collection = db.user_collections
 
 # Create uploads directory
 uploads_dir = Path("/app/backend/uploads")
@@ -72,6 +73,13 @@ class BoosterPack(BaseModel):
 
 class PackOpenRequest(BaseModel):
     pack_id: str
+    user_id: Optional[str] = "default_user"
+
+class UserCollection(BaseModel):
+    user_id: str
+    collected_cards: List[Dict[str, Any]]
+    total_packs_opened: int
+    created_at: str
 
 # API Routes
 
@@ -229,6 +237,9 @@ async def open_pack(request: PackOpenRequest):
             random_card = random.choice(available_cards)
             pulled_cards.append(random_card)
         
+        # Add cards to user's collection
+        await add_cards_to_collection(request.user_id, pulled_cards)
+        
         return {
             "message": "Pack opened successfully!",
             "pack_name": pack["name"],
@@ -239,6 +250,76 @@ async def open_pack(request: PackOpenRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error opening pack: {str(e)}")
+
+async def add_cards_to_collection(user_id: str, cards: List[Dict[str, Any]]):
+    """Add opened cards to user's collection"""
+    try:
+        # Get or create user collection
+        user_collection = user_collections_collection.find_one({"user_id": user_id})
+        
+        if not user_collection:
+            # Create new collection
+            user_collection = {
+                "user_id": user_id,
+                "collected_cards": [],
+                "total_packs_opened": 0,
+                "created_at": str(uuid.uuid4())
+            }
+        
+        # Add timestamp to each card when collected
+        timestamped_cards = []
+        for card in cards:
+            card_copy = card.copy()
+            card_copy["collected_at"] = str(uuid.uuid4())  # Using uuid as timestamp placeholder
+            timestamped_cards.append(card_copy)
+        
+        # Update collection
+        user_collection["collected_cards"].extend(timestamped_cards)
+        user_collection["total_packs_opened"] = user_collection.get("total_packs_opened", 0) + 1
+        
+        # Upsert to database
+        user_collections_collection.update_one(
+            {"user_id": user_id},
+            {"$set": user_collection},
+            upsert=True
+        )
+        
+    except Exception as e:
+        print(f"Error adding cards to collection: {str(e)}")
+
+@app.get("/api/user-collection/{user_id}")
+async def get_user_collection(user_id: str):
+    try:
+        collection = user_collections_collection.find_one({"user_id": user_id}, {"_id": 0})
+        if not collection:
+            return {
+                "user_id": user_id,
+                "collected_cards": [],
+                "total_packs_opened": 0,
+                "unique_cards": 0,
+                "rarity_counts": {}
+            }
+        
+        # Calculate statistics
+        collected_cards = collection.get("collected_cards", [])
+        unique_cards = len(set(card["id"] for card in collected_cards))
+        
+        # Count cards by rarity
+        rarity_counts = {}
+        for card in collected_cards:
+            rarity = card.get("rarity", "Unknown")
+            rarity_counts[rarity] = rarity_counts.get(rarity, 0) + 1
+        
+        return {
+            "user_id": user_id,
+            "collected_cards": collected_cards,
+            "total_packs_opened": collection.get("total_packs_opened", 0),
+            "unique_cards": unique_cards,
+            "total_cards": len(collected_cards),
+            "rarity_counts": rarity_counts
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching user collection: {str(e)}")
 
 @app.get("/api/rarities")
 async def get_rarities():
