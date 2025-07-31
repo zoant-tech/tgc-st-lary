@@ -214,7 +214,7 @@ class TCGPocketAPITester:
         return success
 
     def test_open_random_pack(self, collection_id, user_id="test_user"):
-        """Test opening a random pack from collection"""
+        """Test opening a random pack from collection - NEW: 6 cards with guaranteed Energy + Trainer"""
         pack_data = {
             "collection_id": collection_id,
             "user_id": user_id
@@ -229,13 +229,45 @@ class TCGPocketAPITester:
         )
         
         if success and 'cards' in response:
-            print(f"   Pulled {len(response['cards'])} cards from {response.get('collection_name', 'Unknown')}")
+            cards = response['cards']
+            print(f"   Pulled {len(cards)} cards from {response.get('collection_name', 'Unknown')}")
+            
+            # CRITICAL TEST: Verify pack contains exactly 6 cards
+            if len(cards) != 6:
+                print(f"   ❌ PACK COMPOSITION ERROR: Expected 6 cards, got {len(cards)}")
+                return False
+            else:
+                print(f"   ✅ Pack contains exactly 6 cards as expected")
+            
+            # Count card types and rarities
+            type_counts = {}
             rarity_counts = {}
             for card in response['cards']:
+                card_type = card['card_type']
                 rarity = card['rarity']
+                type_counts[card_type] = type_counts.get(card_type, 0) + 1
                 rarity_counts[rarity] = rarity_counts.get(rarity, 0) + 1
-                print(f"     - {card['name']} ({card['rarity']})")
+                print(f"     - {card['name']} ({card['card_type']}, {card['rarity']})")
+            
+            print(f"   Card type distribution: {type_counts}")
             print(f"   Rarity distribution: {rarity_counts}")
+            
+            # CRITICAL TEST: Verify guaranteed Energy and Trainer cards
+            has_energy = type_counts.get('Energy', 0) >= 1
+            has_trainer = type_counts.get('Trainer', 0) >= 1
+            
+            if not has_energy:
+                print(f"   ❌ PACK COMPOSITION ERROR: No Energy card found!")
+                return False
+            else:
+                print(f"   ✅ Pack contains guaranteed Energy card")
+                
+            if not has_trainer:
+                print(f"   ❌ PACK COMPOSITION ERROR: No Trainer card found!")
+                return False
+            else:
+                print(f"   ✅ Pack contains guaranteed Trainer card")
+                
         return success
 
     def test_get_user_collection(self, user_id="test_user"):
