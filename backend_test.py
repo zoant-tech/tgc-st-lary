@@ -99,12 +99,13 @@ class TCGPocketAPITester:
             print(f"   Available card types: {response['card_types']}")
         return success
 
-    def test_create_collection(self, name, description="Test collection"):
-        """Test collection creation"""
+    def test_create_collection(self, name, description="Test collection", total_cards_in_set=50):
+        """Test collection creation with total_cards_in_set"""
         collection_data = {
             "id": f"collection_{datetime.now().strftime('%H%M%S')}",
             "name": name,
             "description": description,
+            "total_cards_in_set": total_cards_in_set,
             "release_date": "2024-01-01"
         }
         
@@ -120,6 +121,7 @@ class TCGPocketAPITester:
             collection_id = response['collection']['id']
             self.created_collections.append(collection_id)
             print(f"   Created collection ID: {collection_id}")
+            print(f"   Total cards in set: {total_cards_in_set}")
             return collection_id
         return None
 
