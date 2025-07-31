@@ -356,14 +356,14 @@ function App() {
   };
 
   const getDisplayCards = () => {
-    if (!collectionOverview || !userCollection.collected_cards) return [];
+    if (!collectionOverview || !collectionOverview.complete_set || !userCollection.collected_cards) return [];
     
     let displayCards = [];
     
     if (showMissingCards) {
       // Show complete set with missing cards
       displayCards = collectionOverview.complete_set.map(item => {
-        if (item.exists) {
+        if (item.exists && item.card) {
           // Group owned cards by ID and count quantities
           const ownedCards = userCollection.collected_cards?.filter(card => card.id === item.card.id) || [];
           return {
