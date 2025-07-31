@@ -1,0 +1,292 @@
+import requests
+import sys
+import json
+import io
+from datetime import datetime
+from PIL import Image
+
+class TCGPocketAPITester:
+    def __init__(self, base_url="https://21ddf9b2-cdac-4686-9a2d-50ead4150c5d.preview.emergentagent.com"):
+        self.base_url = base_url
+        self.tests_run = 0
+        self.tests_passed = 0
+        self.created_cards = []
+        self.created_packs = []
+
+    def run_test(self, name, method, endpoint, expected_status, data=None, files=None):
+        """Run a single API test"""
+        url = f"{self.base_url}/{endpoint}"
+        headers = {}
+        
+        self.tests_run += 1
+        print(f"\n🔍 Testing {name}...")
+        print(f"   URL: {url}")
+        
+        try:
+            if method == 'GET':
+                response = requests.get(url, headers=headers)
+            elif method == 'POST':
+                if files:
+                    response = requests.post(url, data=data, files=files)
+                elif data:
+                    headers['Content-Type'] = 'application/json'
+                    response = requests.post(url, json=data, headers=headers)
+                else:
+                    response = requests.post(url, headers=headers)
+
+            success = response.status_code == expected_status
+            if success:
+                self.tests_passed += 1
+                print(f"✅ Passed - Status: {response.status_code}")
+                try:
+                    response_data = response.json()
+                    print(f"   Response: {json.dumps(response_data, indent=2)[:200]}...")
+                    return True, response_data
+                except:
+                    return True, {}
+            else:
+                print(f"❌ Failed - Expected {expected_status}, got {response.status_code}")
+                try:
+                    error_data = response.json()
+                    print(f"   Error: {error_data}")
+                except:
+                    print(f"   Error: {response.text}")
+                return False, {}
+
+        except Exception as e:
+            print(f"❌ Failed - Error: {str(e)}")
+            return False, {}
+
+    def create_test_image(self):
+        """Create a simple test image"""
+        img = Image.new('RGB', (200, 280), color='blue')
+        img_bytes = io.BytesIO()
+        img.save(img_bytes, format='JPEG')
+        img_bytes.seek(0)
+        return img_bytes
+
+    def test_health_check(self):
+        """Test health endpoint"""
+        success, _ = self.run_test(
+            "Health Check",
+            "GET",
+            "api/health",
+            200
+        )
+        return success
+
+    def test_get_rarities(self):
+        """Test rarities endpoint"""
+        success, response = self.run_test(
+            "Get Rarities",
+            "GET", 
+            "api/rarities",
+            200
+        )
+        if success and 'rarities' in response:
+            print(f"   Available rarities: {response['rarities']}")
+        return success
+
+    def test_get_card_types(self):
+        """Test card types endpoint"""
+        success, response = self.run_test(
+            "Get Card Types",
+            "GET",
+            "api/card-types", 
+            200
+        )
+        if success and 'card_types' in response:
+            print(f"   Available card types: {response['card_types']}")
+        return success
+
+    def test_create_card(self, name, rarity="Common", card_type="Pokemon"):
+        """Test card creation"""
+        test_image = self.create_test_image()
+        
+        card_data = {
+            'name': name,
+            'rarity': rarity,
+            'card_type': card_type,
+            'hp': '100',
+            'attack_1': 'Thunder Bolt',
+            'attack_2': 'Lightning Strike',
+            'weakness': 'Ground',
+            'resistance': 'Flying',
+            'description': f'A powerful {card_type} card',
+            'set_name': 'Test Set'
+        }
+        
+        files = {
+            'image': ('test_card.jpg', test_image, 'image/jpeg')
+        }
+        
+        success, response = self.run_test(
+            f"Create Card - {name}",
+            "POST",
+            "api/cards",
+            200,
+            data=card_data,
+            files=files
+        )
+        
+        if success and 'card' in response:
+            card_id = response['card']['id']
+            self.created_cards.append(card_id)
+            print(f"   Created card ID: {card_id}")
+            return card_id
+        return None
+
+    def test_get_cards(self):
+        """Test getting all cards"""
+        success, response = self.run_test(
+            "Get All Cards",
+            "GET",
+            "api/cards",
+            200
+        )
+        if success and 'cards' in response:
+            print(f"   Found {len(response['cards'])} cards")
+            return response['cards']
+        return []
+
+    def test_get_single_card(self, card_id):
+        """Test getting a single card"""
+        success, response = self.run_test(
+            f"Get Single Card - {card_id}",
+            "GET",
+            f"api/cards/{card_id}",
+            200
+        )
+        return success
+
+    def test_create_booster_pack(self, name, available_cards):
+        """Test booster pack creation"""
+        pack_data = {
+            "id": f"pack_{datetime.now().strftime('%H%M%S')}",
+            "name": name,
+            "description": f"Test booster pack - {name}",
+            "card_count": 5,
+            "rarity_distribution": [
+                {"rarity": "Common", "count": 3, "guaranteed": False},
+                {"rarity": "Uncommon", "count": 1, "guaranteed": False},
+                {"rarity": "Rare", "count": 1, "guaranteed": True}
+            ],
+            "available_cards": available_cards
+        }
+        
+        success, response = self.run_test(
+            f"Create Booster Pack - {name}",
+            "POST",
+            "api/booster-packs",
+            200,
+            data=pack_data
+        )
+        
+        if success and 'pack' in response:
+            pack_id = response['pack']['id']
+            self.created_packs.append(pack_id)
+            print(f"   Created pack ID: {pack_id}")
+            return pack_id
+        return None
+
+    def test_get_booster_packs(self):
+        """Test getting all booster packs"""
+        success, response = self.run_test(
+            "Get All Booster Packs",
+            "GET",
+            "api/booster-packs",
+            200
+        )
+        if success and 'packs' in response:
+            print(f"   Found {len(response['packs'])} packs")
+            return response['packs']
+        return []
+
+    def test_open_pack(self, pack_id):
+        """Test opening a booster pack"""
+        pack_data = {"pack_id": pack_id}
+        
+        success, response = self.run_test(
+            f"Open Pack - {pack_id}",
+            "POST",
+            "api/open-pack",
+            200,
+            data=pack_data
+        )
+        
+        if success and 'cards' in response:
+            print(f"   Pulled {len(response['cards'])} cards")
+            for card in response['cards']:
+                print(f"     - {card['name']} ({card['rarity']})")
+        return success
+
+def main():
+    print("🚀 Starting TCG Pocket API Tests")
+    print("=" * 50)
+    
+    tester = TCGPocketAPITester()
+    
+    # Test basic endpoints
+    if not tester.test_health_check():
+        print("❌ Health check failed, stopping tests")
+        return 1
+    
+    tester.test_get_rarities()
+    tester.test_get_card_types()
+    
+    # Test card operations
+    print("\n📋 Testing Card Operations")
+    print("-" * 30)
+    
+    # Create test cards with different rarities
+    test_cards = [
+        ("Pikachu", "Common", "Pokemon"),
+        ("Charizard", "Rare", "Pokemon"), 
+        ("Professor Oak", "Uncommon", "Trainer"),
+        ("Lightning Energy", "Common", "Energy"),
+        ("Mewtwo", "Ultra Rare", "Pokemon")
+    ]
+    
+    created_card_ids = []
+    for name, rarity, card_type in test_cards:
+        card_id = tester.test_create_card(name, rarity, card_type)
+        if card_id:
+            created_card_ids.append(card_id)
+    
+    # Test getting cards
+    all_cards = tester.test_get_cards()
+    
+    # Test getting individual cards
+    for card_id in created_card_ids[:2]:  # Test first 2 cards
+        tester.test_get_single_card(card_id)
+    
+    # Test booster pack operations
+    print("\n📦 Testing Booster Pack Operations")
+    print("-" * 35)
+    
+    if created_card_ids:
+        # Create test booster packs
+        pack_id = tester.test_create_booster_pack("Starter Pack", created_card_ids)
+        
+        # Get all packs
+        all_packs = tester.test_get_booster_packs()
+        
+        # Test opening pack
+        if pack_id:
+            tester.test_open_pack(pack_id)
+    else:
+        print("⚠️  No cards available for pack testing")
+    
+    # Print final results
+    print("\n" + "=" * 50)
+    print(f"📊 Final Results: {tester.tests_passed}/{tester.tests_run} tests passed")
+    
+    if tester.tests_passed == tester.tests_run:
+        print("🎉 All tests passed!")
+        return 0
+    else:
+        print(f"⚠️  {tester.tests_run - tester.tests_passed} tests failed")
+        return 1
+
+if __name__ == "__main__":
+    sys.exit(main())
