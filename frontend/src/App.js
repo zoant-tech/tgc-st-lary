@@ -181,11 +181,13 @@ function App() {
   };
 
   const openPack = async (packId) => {
+    console.log('openPack function called with packId:', packId);
     setLoading(true);
     setShowPackAnimation(true);
     setPulledCards([]);
     
     try {
+      console.log('Making API request to:', `${BACKEND_URL}/api/open-pack`);
       const response = await fetch(`${BACKEND_URL}/api/open-pack`, {
         method: 'POST',
         headers: {
@@ -194,8 +196,11 @@ function App() {
         body: JSON.stringify({ pack_id: packId })
       });
 
+      console.log('API response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('Pack opened successfully, received cards:', data.cards);
         
         // Simulate pack opening animation
         setTimeout(() => {
@@ -207,12 +212,14 @@ function App() {
           }, 1500);
         }, 1000);
       } else {
-        alert('Error opening pack');
+        const errorData = await response.json();
+        console.error('Pack opening failed:', errorData);
+        alert('Error opening pack: ' + (errorData.detail || 'Unknown error'));
         setShowPackAnimation(false);
       }
     } catch (error) {
       console.error('Error opening pack:', error);
-      alert('Error opening pack');
+      alert('Error opening pack: ' + error.message);
       setShowPackAnimation(false);
     } finally {
       setLoading(false);
