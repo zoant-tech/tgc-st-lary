@@ -338,11 +338,15 @@ function App() {
     
     switch (sortBy) {
       case 'name':
-        return sortedCards.sort((a, b) => a.card.name.localeCompare(b.card.name));
+        return sortedCards.sort((a, b) => {
+          const nameA = a.card?.name || `Missing Card ${a.card_number}`;
+          const nameB = b.card?.name || `Missing Card ${b.card_number}`;
+          return nameA.localeCompare(nameB);
+        });
       case 'rarity':
         return sortedCards.sort((a, b) => {
-          const rarityA = RARITY_CONFIG[a.card.rarity]?.sortOrder || 0;
-          const rarityB = RARITY_CONFIG[b.card.rarity]?.sortOrder || 0;
+          const rarityA = RARITY_CONFIG[a.card?.rarity]?.sortOrder || 0;
+          const rarityB = RARITY_CONFIG[b.card?.rarity]?.sortOrder || 0;
           return rarityB - rarityA; // Higher rarity first
         });
       case 'number':
