@@ -158,7 +158,11 @@ async def get_card(card_id: str):
 async def create_booster_pack(pack: BoosterPack):
     try:
         pack_data = pack.dict()
-        packs_collection.insert_one(pack_data)
+        result = packs_collection.insert_one(pack_data)
+        
+        # Remove the MongoDB _id field from response to avoid serialization issues
+        pack_data.pop('_id', None)
+        
         return {"message": "Booster pack created successfully", "pack": pack_data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error creating booster pack: {str(e)}")
