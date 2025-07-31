@@ -187,65 +187,41 @@ class TCGPocketAPITester:
             return response['cards']
         return []
 
-    def test_get_single_card(self, card_id):
-        """Test getting a single card"""
+    def test_get_cards_by_collection(self, collection_id):
+        """Test getting cards by collection"""
         success, response = self.run_test(
-            f"Get Single Card - {card_id}",
+            f"Get Cards by Collection - {collection_id}",
             "GET",
-            f"api/cards/{card_id}",
+            f"api/cards/collection/{collection_id}",
             200
         )
+        if success and 'cards' in response:
+            print(f"   Found {len(response['cards'])} cards in collection")
+            return response['cards']
+        return []
+
+    def test_get_pack_probabilities(self):
+        """Test pack probabilities endpoint"""
+        success, response = self.run_test(
+            "Get Pack Probabilities",
+            "GET",
+            "api/pack-probabilities",
+            200
+        )
+        if success and 'probabilities' in response:
+            print(f"   Pack probabilities: {response['probabilities']}")
+            print(f"   Cards per pack: {response['cards_per_pack']}")
         return success
 
-    def test_create_booster_pack(self, name, available_cards):
-        """Test booster pack creation"""
+    def test_open_random_pack(self, collection_id, user_id="test_user"):
+        """Test opening a random pack from collection"""
         pack_data = {
-            "id": f"pack_{datetime.now().strftime('%H%M%S')}",
-            "name": name,
-            "description": f"Test booster pack - {name}",
-            "card_count": 5,
-            "rarity_distribution": [
-                {"rarity": "Common", "count": 3, "guaranteed": False},
-                {"rarity": "Uncommon", "count": 1, "guaranteed": False},
-                {"rarity": "Rare", "count": 1, "guaranteed": True}
-            ],
-            "available_cards": available_cards
+            "collection_id": collection_id,
+            "user_id": user_id
         }
         
         success, response = self.run_test(
-            f"Create Booster Pack - {name}",
-            "POST",
-            "api/booster-packs",
-            200,
-            data=pack_data
-        )
-        
-        if success and 'pack' in response:
-            pack_id = response['pack']['id']
-            self.created_packs.append(pack_id)
-            print(f"   Created pack ID: {pack_id}")
-            return pack_id
-        return None
-
-    def test_get_booster_packs(self):
-        """Test getting all booster packs"""
-        success, response = self.run_test(
-            "Get All Booster Packs",
-            "GET",
-            "api/booster-packs",
-            200
-        )
-        if success and 'packs' in response:
-            print(f"   Found {len(response['packs'])} packs")
-            return response['packs']
-        return []
-
-    def test_open_pack(self, pack_id):
-        """Test opening a booster pack"""
-        pack_data = {"pack_id": pack_id}
-        
-        success, response = self.run_test(
-            f"Open Pack - {pack_id}",
+            f"Open Random Pack - Collection {collection_id}",
             "POST",
             "api/open-pack",
             200,
@@ -253,9 +229,29 @@ class TCGPocketAPITester:
         )
         
         if success and 'cards' in response:
-            print(f"   Pulled {len(response['cards'])} cards")
+            print(f"   Pulled {len(response['cards'])} cards from {response.get('collection_name', 'Unknown')}")
+            rarity_counts = {}
             for card in response['cards']:
+                rarity = card['rarity']
+                rarity_counts[rarity] = rarity_counts.get(rarity, 0) + 1
                 print(f"     - {card['name']} ({card['rarity']})")
+            print(f"   Rarity distribution: {rarity_counts}")
+        return success
+
+    def test_get_user_collection(self, user_id="test_user"):
+        """Test getting user collection"""
+        success, response = self.run_test(
+            f"Get User Collection - {user_id}",
+            "GET",
+            f"api/user-collection/{user_id}",
+            200
+        )
+        if success:
+            print(f"   User has {response.get('total_cards', 0)} total cards")
+            print(f"   Unique cards: {response.get('unique_cards', 0)}")
+            print(f"   Packs opened: {response.get('total_packs_opened', 0)}")
+            if response.get('rarity_counts'):
+                print(f"   Rarity breakdown: {response['rarity_counts']}")
         return success
 
 def main():
