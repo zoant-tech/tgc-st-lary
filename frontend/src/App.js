@@ -356,14 +356,35 @@ function App() {
   };
 
   const getDisplayCards = () => {
-    if (!collectionOverview || !collectionOverview.complete_set || !userCollection.collected_cards) return [];
-    
+    if (!userCollection.collected_cards || userCollection.collected_cards.length === 0) {
+      return [];
+    }
+
+    // If we don't have collection overview yet, show basic grouped cards
+    if (!collectionOverview) {
+      const cardGroups = {};
+      userCollection.collected_cards.forEach(card => {
+        if (!cardGroups[card.id]) {
+          cardGroups[card.id] = {
+            card_number: card.card_number || 0,
+            exists: true,
+            card: card,
+            quantity: 0,
+            owned: true
+          };
+        }
+        cardGroups[card.id].quantity++;
+      });
+      return sortCards(Object.values(cardGroups));
+    }
+
+    // Advanced display with collection overview
     let displayCards = [];
     
     if (showMissingCards) {
       // Show complete set with missing cards
       displayCards = collectionOverview.complete_set.map(item => {
-        if (item.exists && item.card) {
+        if (item.exists) {
           // Group owned cards by ID and count quantities
           const ownedCards = userCollection.collected_cards?.filter(card => card.id === item.card.id) || [];
           return {
