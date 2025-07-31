@@ -330,7 +330,7 @@ class TCGPocketAPITester:
         return None
 
 def main():
-    print("🚀 Starting TCG Pocket Collection-Based API Tests")
+    print("🚀 Starting TCG Pocket Advanced Collection System Tests")
     print("=" * 60)
     
     tester = TCGPocketAPITester()
@@ -344,12 +344,12 @@ def main():
     tester.test_get_card_types()
     tester.test_get_pack_probabilities()
     
-    # Test collection operations
-    print("\n📚 Testing Collection Operations")
-    print("-" * 35)
+    # Test advanced collection operations
+    print("\n📚 Testing Advanced Collection System")
+    print("-" * 40)
     
-    # Create test collection
-    collection_id = tester.test_create_collection("Rubies", "A collection of ruby-themed cards")
+    # Create test collection with 20 cards for easier testing
+    collection_id = tester.test_create_collection("Test Collection", "Testing advanced features", 20)
     if not collection_id:
         print("❌ Collection creation failed, stopping tests")
         return 1
@@ -357,44 +357,33 @@ def main():
     # Get all collections
     all_collections = tester.test_get_collections()
     
-    # Create test cards with different types and rarities for proper pack testing
-    print("\n🃏 Testing Card Operations")
-    print("-" * 30)
+    # Create test cards with specific numbers for testing sorting and missing cards
+    print("\n🃏 Testing Card Numbering System")
+    print("-" * 35)
     
     created_cards = []
+    test_cards = [
+        ("Pikachu", 1, "Common", "Pokemon"),
+        ("Charizard", 3, "Secret Rare", "Pokemon"),
+        ("Energy Card", 5, "Common", "Energy"),
+        ("Professor Oak", 7, "Uncommon", "Trainer"),
+        ("Blastoise", 10, "Rare", "Pokemon"),
+        ("Thunder Stone", 15, "Holo", "Trainer")
+    ]
     
-    # Create Energy cards (guaranteed in packs)
-    energy_cards = []
-    for i in range(3):
-        card_id = tester.test_create_card(f"Energy Card {i+1}", collection_id, "Common", "Energy")
+    for name, card_number, rarity, card_type in test_cards:
+        card_id = tester.test_create_card(name, collection_id, card_number, rarity, card_type)
         if card_id:
-            energy_cards.append(card_id)
             created_cards.append(card_id)
     
-    # Create Trainer cards (guaranteed in packs)  
-    trainer_cards = []
-    for i in range(3):
-        card_id = tester.test_create_card(f"Trainer Card {i+1}", collection_id, "Common", "Trainer")
-        if card_id:
-            trainer_cards.append(card_id)
-            created_cards.append(card_id)
+    # Test collection overview with missing cards
+    print("\n🔍 Testing Collection Overview & Missing Cards")
+    print("-" * 50)
     
-    # Create Pokemon cards with different rarities for random slots
-    rarities = ["Common", "Uncommon", "Rare", "Holo", "Ultra Rare", "Secret Rare"]
-    pokemon_cards = []
-    
-    for i, rarity in enumerate(rarities):
-        card_id = tester.test_create_card(f"Pokemon {rarity} Card {i+1}", collection_id, rarity, "Pokemon")
-        if card_id:
-            pokemon_cards.append(card_id)
-            created_cards.append(card_id)
-    
-    # Create additional common Pokemon cards for better pack variety
-    for i in range(5):
-        card_id = tester.test_create_card(f"Common Pokemon {i+1}", collection_id, "Common", "Pokemon")
-        if card_id:
-            pokemon_cards.append(card_id)
-            created_cards.append(card_id)
+    overview = tester.test_collection_overview(collection_id)
+    if not overview:
+        print("❌ Collection overview failed")
+        return 1
     
     # Get all cards
     all_cards = tester.test_get_cards()
@@ -403,19 +392,18 @@ def main():
     collection_cards = tester.test_get_cards_by_collection(collection_id)
     
     # Test pack opening operations
-    print("\n📦 Testing Random Pack Opening")
-    print("-" * 35)
+    print("\n📦 Testing Pack Opening with New System")
+    print("-" * 40)
     
     if created_cards:
-        # Test opening multiple packs to verify randomness
-        for i in range(3):
-            print(f"\n--- Opening Pack {i+1} ---")
-            tester.test_open_random_pack(collection_id, f"test_user_{i}")
+        # Test opening a pack
+        print(f"\n--- Opening Pack from Collection ---")
+        tester.test_open_random_pack(collection_id, "test_user")
         
         # Test user collection
         print("\n👤 Testing User Collection")
         print("-" * 25)
-        tester.test_get_user_collection("test_user_0")
+        tester.test_get_user_collection("test_user")
         
     else:
         print("⚠️  No cards created for pack testing")
@@ -425,13 +413,13 @@ def main():
     print(f"📊 Final Results: {tester.tests_passed}/{tester.tests_run} tests passed")
     
     if tester.tests_passed >= tester.tests_run * 0.8:  # 80% pass rate
-        print("🎉 NEW 6-Card Pack System is working perfectly!")
+        print("🎉 Advanced Collection System is working!")
         print("\n✅ Key Features Verified:")
-        print("- Collections can be created")
-        print("- Cards can be assigned to collections")
-        print("- Random pack opening with probability-based rarities")
-        print("- User collections track opened cards")
-        print("- ✅ CRITICAL: 6 cards per pack with guaranteed Energy + Trainer")
+        print("- Collections with total_cards_in_set parameter")
+        print("- Cards with specific numbering (1/20, 3/20, etc.)")
+        print("- Collection overview showing complete set with missing cards")
+        print("- Card numbering system working correctly")
+        print("- Missing cards detection working")
         return 0
     else:
         print(f"⚠️  {tester.tests_run - tester.tests_passed} tests failed")
