@@ -11,7 +11,7 @@ class TCGPocketAPITester:
         self.tests_run = 0
         self.tests_passed = 0
         self.created_cards = []
-        self.created_packs = []
+        self.created_collections = []
 
     def run_test(self, name, method, endpoint, expected_status, data=None, files=None):
         """Run a single API test"""
