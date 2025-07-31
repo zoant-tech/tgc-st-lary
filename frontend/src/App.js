@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from './components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { Switch } from './components/ui/switch';
-import { PlusCircle, Package, Sparkles, Star, Zap, Crown, Diamond, Settings, Trophy, Home, Gift, Archive, Dice6 } from 'lucide-react';
+import { PlusCircle, Package, Sparkles, Star, Zap, Crown, Diamond, Settings, Trophy, Home, Gift, Archive, Dice6, Trash2, X } from 'lucide-react';
 import './App.css';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -34,6 +34,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('welcome');
   const [showPackAnimation, setShowPackAnimation] = useState(false);
   const [animatingCards, setAnimatingCards] = useState([]);
+  const [selectedCard, setSelectedCard] = useState(null);
 
   // Collection creation form state
   const [collectionForm, setCollectionForm] = useState({
@@ -197,6 +198,59 @@ function App() {
     }
   };
 
+  const handleDeleteCollection = async (collectionId, collectionName) => {
+    if (!confirm(`Are you sure you want to delete the collection "${collectionName}"? This cannot be undone.`)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/collections/${collectionId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        fetchCollections();
+        alert('Collection deleted successfully!');
+      } else {
+        const errorData = await response.json();
+        alert('Error deleting collection: ' + (errorData.detail || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error deleting collection:', error);
+      alert('Error deleting collection');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteCard = async (cardId, cardName) => {
+    if (!confirm(`Are you sure you want to delete the card "${cardName}"? This cannot be undone.`)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/cards/${cardId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        fetchCards();
+        fetchCollections(); // Refresh to update card counts
+        alert('Card deleted successfully!');
+      } else {
+        const errorData = await response.json();
+        alert('Error deleting card: ' + (errorData.detail || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error deleting card:', error);
+      alert('Error deleting card');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const openRandomPack = async (collectionId) => {
     console.log('Opening random pack from collection:', collectionId);
     setLoading(true);
@@ -245,8 +299,11 @@ function App() {
     }
   };
 
-  const CardDisplay = ({ card, className = "" }) => (
-    <div className={`relative group cursor-pointer transform transition-all duration-300 hover:scale-105 ${className}`}>
+  const CardDisplay = ({ card, className = "", onClick }) => (
+    <div 
+      className={`relative group cursor-pointer transform transition-all duration-300 hover:scale-105 ${className}`}
+      onClick={onClick}
+    >
       <div className={`rounded-xl overflow-hidden border-2 ${RARITY_CONFIG[card.rarity]?.glow || 'shadow-gray-200'} shadow-lg hover:shadow-xl transition-all duration-300`}>
         <div className="relative">
           <img 
@@ -266,6 +323,80 @@ function App() {
           <div className="flex justify-between items-center text-sm text-gray-600">
             <span>{card.card_type}</span>
             {card.hp && <span>HP: {card.hp}</span>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Card Modal for enlarged view
+  const CardModal = ({ card, onClose }) => (
+    <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+      <div className="relative max-w-md w-full">
+        <button
+          onClick={onClose}
+          className="absolute -top-4 -right-4 bg-white rounded-full p-2 shadow-lg hover:shadow-xl transition-shadow z-10"
+        >
+          <X className="w-6 h-6 text-gray-600" />
+        </button>
+        <div className={`rounded-xl overflow-hidden border-4 ${RARITY_CONFIG[card.rarity]?.glow || 'shadow-gray-200'} shadow-2xl transform transition-all duration-300`}>
+          <div className="relative">
+            <img 
+              src={`${BACKEND_URL}${card.image_url}`} 
+              alt={card.name}
+              className="w-full h-96 object-cover"
+            />
+            <div className="absolute top-4 right-4">
+              <Badge className={`${RARITY_CONFIG[card.rarity]?.color || 'bg-gray-100'} flex items-center gap-1 text-lg px-3 py-1`}>
+                {RARITY_CONFIG[card.rarity]?.icon}
+                {card.rarity}
+              </Badge>
+            </div>
+          </div>
+          <div className="p-6 bg-white">
+            <h2 className="text-2xl font-bold mb-2">{card.name}</h2>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Type:</span>
+                <span>{card.card_type}</span>
+              </div>
+              {card.hp && (
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">HP:</span>
+                  <span>{card.hp}</span>
+                </div>
+              )}
+              {card.attack_1 && (
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Attack 1:</span>
+                  <span>{card.attack_1}</span>
+                </div>
+              )}
+              {card.attack_2 && (
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Attack 2:</span>
+                  <span>{card.attack_2}</span>
+                </div>
+              )}
+              {card.weakness && (
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Weakness:</span>
+                  <span>{card.weakness}</span>
+                </div>
+              )}
+              {card.resistance && (
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Resistance:</span>
+                  <span>{card.resistance}</span>
+                </div>
+              )}
+              {card.description && (
+                <div className="mt-4">
+                  <span className="font-medium">Description:</span>
+                  <p className="text-gray-600 mt-1">{card.description}</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -341,7 +472,7 @@ function App() {
               Create New Card
             </CardTitle>
             <p className="text-sm text-gray-600">
-              Add cards to your collections. Users will randomly receive these cards when opening packs.
+              Add cards to your collections. Each pack contains 6 cards: 1 Energy, 1 Trainer, and 4 random cards.
             </p>
           </CardHeader>
           <CardContent>
@@ -441,12 +572,25 @@ function App() {
               <div className="space-y-4 max-h-96 overflow-y-auto">
                 {collections.map((collection) => (
                   <div key={collection.id} className="border rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Archive className="w-5 h-5 text-blue-500" />
-                      <h4 className="font-bold">{collection.name}</h4>
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Archive className="w-5 h-5 text-blue-500" />
+                          <h4 className="font-bold">{collection.name}</h4>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-2">{collection.description}</p>
+                        <Badge variant="secondary">{collection.total_cards || 0} cards</Badge>
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteCollection(collection.id, collection.name)}
+                        disabled={loading}
+                        className="ml-4"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
-                    <p className="text-sm text-gray-600 mb-2">{collection.description}</p>
-                    <Badge variant="secondary">{collection.total_cards || 0} cards</Badge>
                   </div>
                 ))}
                 {collections.length === 0 && (
@@ -460,12 +604,36 @@ function App() {
               <CardTitle>All Cards ({cards.length})</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4 max-h-96 overflow-y-auto">
+              <div className="space-y-4 max-h-96 overflow-y-auto">
                 {cards.map((card) => (
-                  <CardDisplay key={card.id} card={card} className="scale-75" />
+                  <div key={card.id} className="flex items-center gap-4 border rounded-lg p-3">
+                    <img 
+                      src={`${BACKEND_URL}${card.image_url}`} 
+                      alt={card.name}
+                      className="w-16 h-20 object-cover rounded"
+                    />
+                    <div className="flex-1">
+                      <h4 className="font-bold">{card.name}</h4>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge className={`${RARITY_CONFIG[card.rarity]?.color || 'bg-gray-100'} flex items-center gap-1 text-xs`}>
+                          {RARITY_CONFIG[card.rarity]?.icon}
+                          {card.rarity}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">{card.card_type}</Badge>
+                      </div>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteCard(card.id, card.name)}
+                      disabled={loading}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 ))}
                 {cards.length === 0 && (
-                  <p className="text-gray-500 text-center col-span-2">No cards created yet</p>
+                  <p className="text-gray-500 text-center">No cards created yet</p>
                 )}
               </div>
             </CardContent>
@@ -493,15 +661,15 @@ function App() {
               Welcome to TCG Pocket!
             </h2>
             <p className="text-xl text-gray-600 mb-8">
-              Choose a collection and open random booster packs. Each pack contains 11 cards with varying rarities - will you get lucky?
+              Choose a collection and open random booster packs. Each pack contains 6 cards: 1 Energy, 1 Trainer, and 4 random cards with varying rarities!
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               <Card>
                 <CardContent className="p-6 text-center">
                   <Dice6 className="w-12 h-12 mx-auto text-blue-500 mb-4" />
-                  <h3 className="font-bold mb-2">Random Packs</h3>
-                  <p className="text-sm text-gray-600">Each pack is completely random - luck determines your cards!</p>
+                  <h3 className="font-bold mb-2">6-Card Packs</h3>
+                  <p className="text-sm text-gray-600">Each pack guarantees 1 Energy + 1 Trainer + 4 random cards!</p>
                 </CardContent>
               </Card>
               <Card>
@@ -561,7 +729,7 @@ function App() {
       <TabsContent value="open-packs" className="space-y-6">
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold mb-2">Choose a Collection</h2>
-          <p className="text-gray-600">Each pack contains 11 random cards with different rarity chances</p>
+          <p className="text-gray-600">Each pack contains 6 cards: 1 Energy + 1 Trainer + 4 random cards</p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -582,7 +750,12 @@ function App() {
               <CardContent>
                 <div className="space-y-3">
                   <div>
-                    <p className="text-sm font-medium mb-2">Rarity Chances per Pack:</p>
+                    <p className="text-sm font-medium mb-2">Pack Contents:</p>
+                    <div className="grid grid-cols-2 gap-1 text-xs mb-2">
+                      <Badge variant="outline" className="text-green-600">1x Energy ⚡</Badge>
+                      <Badge variant="outline" className="text-blue-600">1x Trainer 👤</Badge>
+                    </div>
+                    <p className="text-sm font-medium mb-2">Random Card Chances:</p>
                     <div className="grid grid-cols-2 gap-1 text-xs">
                       <Badge variant="outline">65% Common</Badge>
                       <Badge variant="outline">20% Uncommon</Badge>
@@ -600,7 +773,7 @@ function App() {
                     {loading ? 'Opening...' : (
                       <span className="flex items-center gap-2">
                         <Dice6 className="w-4 h-4" />
-                        Open Random Pack (11 cards)
+                        Open Random Pack (6 cards)
                       </span>
                     )}
                   </Button>
@@ -617,7 +790,7 @@ function App() {
               <Sparkles className="w-5 h-5 text-yellow-500" />
               Cards You Got! (Lucky Pull!)
             </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               {pulledCards.map((card, index) => (
                 <CardDisplay key={index} card={card} className="card-pulled" />
               ))}
@@ -668,9 +841,14 @@ function App() {
           </Card>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {/* Cards displayed in rows of 3 */}
+        <div className="grid grid-cols-3 gap-6">
           {userCollection.collected_cards && userCollection.collected_cards.map((card, index) => (
-            <CardDisplay key={`${card.id}-${index}`} card={card} />
+            <CardDisplay 
+              key={`${card.id}-${index}`} 
+              card={card} 
+              onClick={() => setSelectedCard(card)}
+            />
           ))}
         </div>
 
@@ -754,6 +932,14 @@ function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Card Modal */}
+      {selectedCard && (
+        <CardModal 
+          card={selectedCard} 
+          onClose={() => setSelectedCard(null)} 
+        />
       )}
 
       {/* Main Content */}

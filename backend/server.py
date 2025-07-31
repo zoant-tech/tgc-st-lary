@@ -52,7 +52,7 @@ RARITY_PROBABILITIES = {
     "Secret Rare": 0.005 # 0.5% chance
 }
 
-CARDS_PER_PACK = 11  # Standard pack size
+CARDS_PER_PACK = 6  # Changed from 11 to 6 cards per pack
 
 # Pydantic models
 class Card(BaseModel):
@@ -120,6 +120,30 @@ async def get_collections():
         return {"collections": collections}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching collections: {str(e)}")
+
+@app.delete("/api/collections/{collection_id}")
+async def delete_collection(collection_id: str):
+    try:
+        # Check if collection exists
+        collection = collections_db.find_one({"id": collection_id})
+        if not collection:
+            raise HTTPException(status_code=404, detail="Collection not found")
+        
+        # Check if there are cards in this collection
+        card_count = cards_collection.count_documents({"collection_id": collection_id})
+        if card_count > 0:
+            raise HTTPException(status_code=400, detail=f"Cannot delete collection with {card_count} cards. Delete cards first.")
+        
+        # Delete the collection
+        result = collections_db.delete_one({"id": collection_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Collection not found")
+        
+        return {"message": "Collection deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting collection: {str(e)}")
 
 @app.post("/api/cards")
 async def create_card(
@@ -194,6 +218,35 @@ async def get_cards_by_collection(collection_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching cards by collection: {str(e)}")
 
+@app.delete("/api/cards/{card_id}")
+async def delete_card(card_id: str):
+    try:
+        # Find the card first to get the image path
+        card = cards_collection.find_one({"id": card_id}, {"_id": 0})
+        if not card:
+            raise HTTPException(status_code=404, detail="Card not found")
+        
+        # Delete the card from database
+        result = cards_collection.delete_one({"id": card_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Card not found")
+        
+        # Try to delete the image file (optional, don't fail if file doesn't exist)
+        try:
+            if card.get("image_url"):
+                image_filename = card["image_url"].replace("/uploads/", "")
+                image_path = uploads_dir / image_filename
+                if image_path.exists():
+                    image_path.unlink()
+        except Exception as img_error:
+            print(f"Warning: Could not delete image file: {img_error}")
+        
+        return {"message": "Card deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting card: {str(e)}")
+
 @app.post("/api/open-pack")
 async def open_pack(request: PackOpenRequest):
     try:
@@ -211,7 +264,31 @@ async def open_pack(request: PackOpenRequest):
         if not available_cards:
             raise HTTPException(status_code=400, detail="No cards available in this collection")
         
-        # Group cards by rarity for easier selection
+        # Group cards by type for guaranteed selections
+        pokemon_cards = [card for card in available_cards if card["card_type"] == "Pokemon"]
+        trainer_cards = [card for card in available_cards if card["card_type"] == "Trainer"]
+        energy_cards = [card for card in available_cards if card["card_type"] == "Energy"]
+        
+        pulled_cards = []
+        
+        # Guarantee 1 Energy card
+        if energy_cards:
+            energy_card = random.choice(energy_cards)
+            pulled_cards.append(energy_card)
+        elif available_cards:  # Fallback if no energy cards
+            pulled_cards.append(random.choice(available_cards))
+        
+        # Guarantee 1 Trainer card
+        if trainer_cards:
+            trainer_card = random.choice(trainer_cards)
+            pulled_cards.append(trainer_card)
+        elif available_cards:  # Fallback if no trainer cards
+            pulled_cards.append(random.choice(available_cards))
+        
+        # Fill remaining 4 slots with random cards based on rarity probabilities
+        remaining_slots = CARDS_PER_PACK - len(pulled_cards)
+        
+        # Group all cards by rarity for probability-based selection
         cards_by_rarity = {}
         for card in available_cards:
             rarity = card["rarity"]
@@ -219,10 +296,7 @@ async def open_pack(request: PackOpenRequest):
                 cards_by_rarity[rarity] = []
             cards_by_rarity[rarity].append(card)
         
-        # Generate random pack contents based on probabilities
-        pulled_cards = []
-        
-        for _ in range(CARDS_PER_PACK):
+        for _ in range(remaining_slots):
             # Generate random number to determine rarity based on probabilities
             rand = random.random()
             cumulative_prob = 0
