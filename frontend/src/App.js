@@ -352,7 +352,7 @@ function App() {
   };
 
   const getDisplayCards = () => {
-    if (!collectionOverview) return [];
+    if (!collectionOverview || !userCollection.collected_cards) return [];
     
     let displayCards = [];
     
