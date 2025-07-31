@@ -99,7 +99,44 @@ class TCGPocketAPITester:
             print(f"   Available card types: {response['card_types']}")
         return success
 
-    def test_create_card(self, name, rarity="Common", card_type="Pokemon"):
+    def test_create_collection(self, name, description="Test collection"):
+        """Test collection creation"""
+        collection_data = {
+            "id": f"collection_{datetime.now().strftime('%H%M%S')}",
+            "name": name,
+            "description": description,
+            "release_date": "2024-01-01"
+        }
+        
+        success, response = self.run_test(
+            f"Create Collection - {name}",
+            "POST",
+            "api/collections",
+            200,
+            data=collection_data
+        )
+        
+        if success and 'collection' in response:
+            collection_id = response['collection']['id']
+            self.created_collections.append(collection_id)
+            print(f"   Created collection ID: {collection_id}")
+            return collection_id
+        return None
+
+    def test_get_collections(self):
+        """Test getting all collections"""
+        success, response = self.run_test(
+            "Get All Collections",
+            "GET",
+            "api/collections",
+            200
+        )
+        if success and 'collections' in response:
+            print(f"   Found {len(response['collections'])} collections")
+            return response['collections']
+        return []
+
+    def test_create_card(self, name, collection_id, rarity="Common", card_type="Pokemon"):
         """Test card creation"""
         test_image = self.create_test_image()
         
@@ -107,6 +144,7 @@ class TCGPocketAPITester:
             'name': name,
             'rarity': rarity,
             'card_type': card_type,
+            'collection_id': collection_id,
             'hp': '100',
             'attack_1': 'Thunder Bolt',
             'attack_2': 'Lightning Strike',
