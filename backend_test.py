@@ -314,23 +314,43 @@ def main():
     # Get all collections
     all_collections = tester.test_get_collections()
     
-    # Test card operations
+    # Create test cards with different types and rarities for proper pack testing
     print("\n🃏 Testing Card Operations")
     print("-" * 30)
     
-    # Create test cards with different rarities
-    rarities = ["Common", "Uncommon", "Rare", "Holo", "Ultra Rare", "Secret Rare"]
     created_cards = []
     
-    for i, rarity in enumerate(rarities):
-        card_id = tester.test_create_card(f"Test {rarity} Card {i+1}", collection_id, rarity)
+    # Create Energy cards (guaranteed in packs)
+    energy_cards = []
+    for i in range(3):
+        card_id = tester.test_create_card(f"Energy Card {i+1}", collection_id, "Common", "Energy")
         if card_id:
+            energy_cards.append(card_id)
             created_cards.append(card_id)
     
-    # Create multiple common cards for better pack opening
-    for i in range(5):
-        card_id = tester.test_create_card(f"Common Card {i+1}", collection_id, "Common")
+    # Create Trainer cards (guaranteed in packs)  
+    trainer_cards = []
+    for i in range(3):
+        card_id = tester.test_create_card(f"Trainer Card {i+1}", collection_id, "Common", "Trainer")
         if card_id:
+            trainer_cards.append(card_id)
+            created_cards.append(card_id)
+    
+    # Create Pokemon cards with different rarities for random slots
+    rarities = ["Common", "Uncommon", "Rare", "Holo", "Ultra Rare", "Secret Rare"]
+    pokemon_cards = []
+    
+    for i, rarity in enumerate(rarities):
+        card_id = tester.test_create_card(f"Pokemon {rarity} Card {i+1}", collection_id, rarity, "Pokemon")
+        if card_id:
+            pokemon_cards.append(card_id)
+            created_cards.append(card_id)
+    
+    # Create additional common Pokemon cards for better pack variety
+    for i in range(5):
+        card_id = tester.test_create_card(f"Common Pokemon {i+1}", collection_id, "Common", "Pokemon")
+        if card_id:
+            pokemon_cards.append(card_id)
             created_cards.append(card_id)
     
     # Get all cards
