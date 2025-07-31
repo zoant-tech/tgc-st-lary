@@ -361,19 +361,21 @@ function App() {
     }
 
     // If we don't have collection overview yet, show basic grouped cards
-    if (!collectionOverview) {
+    if (!collectionOverview || !collectionOverview.complete_set) {
       const cardGroups = {};
       userCollection.collected_cards.forEach(card => {
-        if (!cardGroups[card.id]) {
-          cardGroups[card.id] = {
-            card_number: card.card_number || 0,
-            exists: true,
-            card: card,
-            quantity: 0,
-            owned: true
-          };
+        if (card && card.id) {
+          if (!cardGroups[card.id]) {
+            cardGroups[card.id] = {
+              card_number: card.card_number || 0,
+              exists: true,
+              card: card,
+              quantity: 0,
+              owned: true
+            };
+          }
+          cardGroups[card.id].quantity++;
         }
-        cardGroups[card.id].quantity++;
       });
       return sortCards(Object.values(cardGroups));
     }
@@ -386,7 +388,7 @@ function App() {
       displayCards = collectionOverview.complete_set.map(item => {
         if (item.exists) {
           // Group owned cards by ID and count quantities
-          const ownedCards = userCollection.collected_cards?.filter(card => card.id === item.card.id) || [];
+          const ownedCards = userCollection.collected_cards?.filter(card => card && card.id === item.card?.id) || [];
           return {
             card_number: item.card_number,
             exists: true,
@@ -408,16 +410,18 @@ function App() {
       // Show only owned cards
       const cardGroups = {};
       userCollection.collected_cards?.forEach(card => {
-        if (!cardGroups[card.id]) {
-          cardGroups[card.id] = {
-            card_number: card.card_number,
-            exists: true,
-            card: card,
-            quantity: 0,
-            owned: true
-          };
+        if (card && card.id) {
+          if (!cardGroups[card.id]) {
+            cardGroups[card.id] = {
+              card_number: card.card_number || 0,
+              exists: true,
+              card: card,
+              quantity: 0,
+              owned: true
+            };
+          }
+          cardGroups[card.id].quantity++;
         }
-        cardGroups[card.id].quantity++;
       });
       displayCards = Object.values(cardGroups);
     }
