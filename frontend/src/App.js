@@ -841,15 +841,38 @@ function App() {
           </Card>
         )}
 
-        {/* Cards displayed in rows of 3 */}
+        {/* Cards displayed in rows of 3 with quantity indicators */}
         <div className="grid grid-cols-3 gap-6">
-          {userCollection.collected_cards && userCollection.collected_cards.map((card, index) => (
-            <CardDisplay 
-              key={`${card.id}-${index}`} 
-              card={card} 
-              onClick={() => setSelectedCard(card)}
-            />
-          ))}
+          {userCollection.collected_cards && (() => {
+            // Group cards by ID and count quantities
+            const cardGroups = {};
+            userCollection.collected_cards.forEach(card => {
+              if (!cardGroups[card.id]) {
+                cardGroups[card.id] = {
+                  card: card,
+                  quantity: 0
+                };
+              }
+              cardGroups[card.id].quantity++;
+            });
+
+            return Object.values(cardGroups).map((group) => (
+              <div key={group.card.id} className="relative">
+                <CardDisplay 
+                  card={group.card} 
+                  onClick={() => setSelectedCard(group.card)}
+                />
+                {/* Quantity indicator */}
+                {group.quantity > 1 && (
+                  <div className="absolute -top-2 -right-2 z-10">
+                    <Badge className="bg-yellow-500 text-white font-bold px-2 py-1 text-sm shadow-lg">
+                      x{group.quantity}
+                    </Badge>
+                  </div>
+                )}
+              </div>
+            ));
+          })()}
         </div>
 
         {(!userCollection.collected_cards || userCollection.collected_cards.length === 0) && (
