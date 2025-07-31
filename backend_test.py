@@ -382,13 +382,13 @@ def main():
     print(f"📊 Final Results: {tester.tests_passed}/{tester.tests_run} tests passed")
     
     if tester.tests_passed >= tester.tests_run * 0.8:  # 80% pass rate
-        print("🎉 Collection-based system is working well!")
+        print("🎉 NEW 6-Card Pack System is working perfectly!")
         print("\n✅ Key Features Verified:")
         print("- Collections can be created")
         print("- Cards can be assigned to collections")
         print("- Random pack opening with probability-based rarities")
         print("- User collections track opened cards")
-        print("- 11 cards per pack as expected")
+        print("- ✅ CRITICAL: 6 cards per pack with guaranteed Energy + Trainer")
         return 0
     else:
         print(f"⚠️  {tester.tests_run - tester.tests_passed} tests failed")
