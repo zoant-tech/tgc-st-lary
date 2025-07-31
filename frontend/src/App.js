@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from './components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { Switch } from './components/ui/switch';
-import { PlusCircle, Package, Sparkles, Star, Zap, Crown, Diamond, Settings, Trophy, Home, Gift, Archive, Dice6, Trash2, X } from 'lucide-react';
+import { PlusCircle, Package, Sparkles, Star, Zap, Crown, Diamond, Settings, Trophy, Home, Gift, Archive, Dice6, Trash2, X, SortAsc, Eye, EyeOff } from 'lucide-react';
 import './App.css';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -16,12 +16,12 @@ const USER_ID = "default_user"; // In a real app, this would come from authentic
 
 // Rarity configurations with icons and colors
 const RARITY_CONFIG = {
-  'Common': { icon: <div className="w-4 h-4 rounded-full bg-gray-400"></div>, color: 'bg-gray-100 text-gray-800', glow: 'shadow-gray-200' },
-  'Uncommon': { icon: <Star className="w-4 h-4 text-green-500" />, color: 'bg-green-100 text-green-800', glow: 'shadow-green-200' },
-  'Rare': { icon: <Sparkles className="w-4 h-4 text-blue-500" />, color: 'bg-blue-100 text-blue-800', glow: 'shadow-blue-200' },
-  'Holo': { icon: <Zap className="w-4 h-4 text-purple-500" />, color: 'bg-purple-100 text-purple-800', glow: 'shadow-purple-200' },
-  'Ultra Rare': { icon: <Crown className="w-4 h-4 text-yellow-500" />, color: 'bg-yellow-100 text-yellow-800', glow: 'shadow-yellow-200' },
-  'Secret Rare': { icon: <Diamond className="w-4 h-4 text-pink-500" />, color: 'bg-pink-100 text-pink-800', glow: 'shadow-pink-200' }
+  'Common': { icon: <div className="w-4 h-4 rounded-full bg-gray-400"></div>, color: 'bg-gray-100 text-gray-800', glow: 'shadow-gray-200', sortOrder: 1 },
+  'Uncommon': { icon: <Star className="w-4 h-4 text-green-500" />, color: 'bg-green-100 text-green-800', glow: 'shadow-green-200', sortOrder: 2 },
+  'Rare': { icon: <Sparkles className="w-4 h-4 text-blue-500" />, color: 'bg-blue-100 text-blue-800', glow: 'shadow-blue-200', sortOrder: 3 },
+  'Holo': { icon: <Zap className="w-4 h-4 text-purple-500" />, color: 'bg-purple-100 text-purple-800', glow: 'shadow-purple-200', sortOrder: 4 },
+  'Ultra Rare': { icon: <Crown className="w-4 h-4 text-yellow-500" />, color: 'bg-yellow-100 text-yellow-800', glow: 'shadow-yellow-200', sortOrder: 5 },
+  'Secret Rare': { icon: <Diamond className="w-4 h-4 text-pink-500" />, color: 'bg-pink-100 text-pink-800', glow: 'shadow-pink-200', sortOrder: 6 }
 };
 
 function App() {
@@ -35,11 +35,17 @@ function App() {
   const [showPackAnimation, setShowPackAnimation] = useState(false);
   const [animatingCards, setAnimatingCards] = useState([]);
   const [selectedCard, setSelectedCard] = useState(null);
+  
+  // Collection sorting and filtering states
+  const [sortBy, setSortBy] = useState('number'); // 'number', 'name', 'rarity'
+  const [showMissingCards, setShowMissingCards] = useState(true);
+  const [collectionOverview, setCollectionOverview] = useState(null);
 
   // Collection creation form state
   const [collectionForm, setCollectionForm] = useState({
     name: '',
     description: '',
+    total_cards_in_set: 50,
     release_date: ''
   });
 
@@ -49,6 +55,7 @@ function App() {
     rarity: 'Common',
     card_type: 'Pokemon',
     collection_id: '',
+    card_number: 1,
     hp: '',
     attack_1: '',
     attack_2: '',
@@ -75,6 +82,13 @@ function App() {
       setActiveTab('welcome');
     }
   }, [isAdminMode]);
+
+  useEffect(() => {
+    // Fetch collection overview when user has cards
+    if (userCollection.collected_cards && userCollection.collected_cards.length > 0) {
+      fetchCollectionOverview();
+    }
+  }, [userCollection]);
 
   const fetchCards = async () => {
     try {
@@ -106,6 +120,22 @@ function App() {
     }
   };
 
+  const fetchCollectionOverview = async () => {
+    try {
+      // Get the first collection ID from user's cards (for demo purposes)
+      if (userCollection.collected_cards && userCollection.collected_cards.length > 0) {
+        const firstCard = userCollection.collected_cards[0];
+        const collectionId = firstCard.collection_id;
+        
+        const response = await fetch(`${BACKEND_URL}/api/collection-overview/${collectionId}`);
+        const data = await response.json();
+        setCollectionOverview(data);
+      }
+    } catch (error) {
+      console.error('Error fetching collection overview:', error);
+    }
+  };
+
   const handleCollectionSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -114,6 +144,7 @@ function App() {
         id: Date.now().toString(),
         name: collectionForm.name,
         description: collectionForm.description,
+        total_cards_in_set: parseInt(collectionForm.total_cards_in_set),
         release_date: collectionForm.release_date
       };
 
@@ -129,6 +160,7 @@ function App() {
         setCollectionForm({
           name: '',
           description: '',
+          total_cards_in_set: 50,
           release_date: ''
         });
         fetchCollections();
@@ -175,6 +207,7 @@ function App() {
           rarity: 'Common',
           card_type: 'Pokemon',
           collection_id: '',
+          card_number: 1,
           hp: '',
           attack_1: '',
           attack_2: '',
@@ -188,7 +221,8 @@ function App() {
         fetchCollections(); // Refresh to update card counts
         alert('Card created successfully!');
       } else {
-        alert('Error creating card');
+        const errorData = await response.json();
+        alert('Error creating card: ' + (errorData.detail || 'Unknown error'));
       }
     } catch (error) {
       console.error('Error creating card:', error);
@@ -299,6 +333,73 @@ function App() {
     }
   };
 
+  const sortCards = (cards) => {
+    const sortedCards = [...cards];
+    
+    switch (sortBy) {
+      case 'name':
+        return sortedCards.sort((a, b) => a.card.name.localeCompare(b.card.name));
+      case 'rarity':
+        return sortedCards.sort((a, b) => {
+          const rarityA = RARITY_CONFIG[a.card.rarity]?.sortOrder || 0;
+          const rarityB = RARITY_CONFIG[b.card.rarity]?.sortOrder || 0;
+          return rarityB - rarityA; // Higher rarity first
+        });
+      case 'number':
+      default:
+        return sortedCards.sort((a, b) => a.card_number - b.card_number);
+    }
+  };
+
+  const getDisplayCards = () => {
+    if (!collectionOverview) return [];
+    
+    let displayCards = [];
+    
+    if (showMissingCards) {
+      // Show complete set with missing cards
+      displayCards = collectionOverview.complete_set.map(item => {
+        if (item.exists) {
+          // Group owned cards by ID and count quantities
+          const ownedCards = userCollection.collected_cards?.filter(card => card.id === item.card.id) || [];
+          return {
+            card_number: item.card_number,
+            exists: true,
+            card: item.card,
+            quantity: ownedCards.length,
+            owned: ownedCards.length > 0
+          };
+        } else {
+          return {
+            card_number: item.card_number,
+            exists: false,
+            card: null,
+            quantity: 0,
+            owned: false
+          };
+        }
+      });
+    } else {
+      // Show only owned cards
+      const cardGroups = {};
+      userCollection.collected_cards?.forEach(card => {
+        if (!cardGroups[card.id]) {
+          cardGroups[card.id] = {
+            card_number: card.card_number,
+            exists: true,
+            card: card,
+            quantity: 0,
+            owned: true
+          };
+        }
+        cardGroups[card.id].quantity++;
+      });
+      displayCards = Object.values(cardGroups);
+    }
+    
+    return sortCards(displayCards);
+  };
+
   const CardDisplay = ({ card, className = "", onClick }) => (
     <div 
       className={`relative group cursor-pointer transform transition-all duration-300 hover:scale-105 ${className}`}
@@ -317,12 +418,41 @@ function App() {
               {card.rarity}
             </Badge>
           </div>
+          {card.card_number && (
+            <div className="absolute bottom-2 left-2">
+              <Badge className="bg-black bg-opacity-75 text-white text-xs">
+                {card.card_number}/{collectionOverview?.total_cards_in_set || 50}
+              </Badge>
+            </div>
+          )}
         </div>
         <div className="p-3">
           <h3 className="font-bold text-lg mb-1">{card.name}</h3>
           <div className="flex justify-between items-center text-sm text-gray-600">
             <span>{card.card_type}</span>
             {card.hp && <span>HP: {card.hp}</span>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Missing Card Display
+  const MissingCardDisplay = ({ cardNumber, totalCards, className = "" }) => (
+    <div className={`relative group cursor-not-allowed ${className}`}>
+      <div className="rounded-xl overflow-hidden border-2 border-dashed border-gray-300 shadow-lg bg-gray-100">
+        <div className="relative h-48 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+          <div className="text-center">
+            <Package className="w-12 h-12 mx-auto text-gray-400 mb-2" />
+            <Badge className="bg-gray-500 text-white">
+              {cardNumber}/{totalCards}
+            </Badge>
+          </div>
+        </div>
+        <div className="p-3">
+          <h3 className="font-bold text-lg mb-1 text-gray-500">Missing Card</h3>
+          <div className="text-sm text-gray-400">
+            Card #{cardNumber}
           </div>
         </div>
       </div>
@@ -352,6 +482,13 @@ function App() {
                 {card.rarity}
               </Badge>
             </div>
+            {card.card_number && (
+              <div className="absolute bottom-4 left-4">
+                <Badge className="bg-black bg-opacity-75 text-white text-lg px-3 py-1">
+                  {card.card_number}/{collectionOverview?.total_cards_in_set || 50}
+                </Badge>
+              </div>
+            )}
           </div>
           <div className="p-6 bg-white">
             <h2 className="text-2xl font-bold mb-2">{card.name}</h2>
@@ -421,7 +558,7 @@ function App() {
               Create New Collection
             </CardTitle>
             <p className="text-sm text-gray-600">
-              Collections are like card sets (e.g., "Rubies", "Base Set"). Users will open random packs from these collections.
+              Collections are like card sets (e.g., "Rubies", "Base Set"). Each collection has a set number of cards (e.g., 50 cards).
             </p>
           </CardHeader>
           <CardContent>
@@ -443,6 +580,19 @@ function App() {
                   placeholder="Describe this collection..."
                   value={collectionForm.description}
                   onChange={(e) => setCollectionForm({...collectionForm, description: e.target.value})}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="total-cards">Total Cards in Set</Label>
+                <Input
+                  id="total-cards"
+                  type="number"
+                  min="1"
+                  max="500"
+                  placeholder="50"
+                  value={collectionForm.total_cards_in_set}
+                  onChange={(e) => setCollectionForm({...collectionForm, total_cards_in_set: e.target.value})}
                   required
                 />
               </div>
@@ -472,7 +622,7 @@ function App() {
               Create New Card
             </CardTitle>
             <p className="text-sm text-gray-600">
-              Add cards to your collections. Each pack contains 6 cards: 1 Energy, 1 Trainer, and 4 random cards.
+              Add cards to your collections. Each card gets a unique number (e.g., 1/50, 2/50, etc.).
             </p>
           </CardHeader>
           <CardContent>
@@ -496,11 +646,22 @@ function App() {
                     <SelectContent>
                       {collections.map(collection => (
                         <SelectItem key={collection.id} value={collection.id}>
-                          {collection.name}
+                          {collection.name} ({collection.actual_cards || 0}/{collection.total_cards_in_set})
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div>
+                  <Label htmlFor="card-number">Card Number</Label>
+                  <Input
+                    id="card-number"
+                    type="number"
+                    min="1"
+                    value={cardForm.card_number}
+                    onChange={(e) => setCardForm({...cardForm, card_number: parseInt(e.target.value)})}
+                    required
+                  />
                 </div>
                 <div>
                   <Label htmlFor="rarity">Rarity</Label>
@@ -579,7 +740,9 @@ function App() {
                           <h4 className="font-bold">{collection.name}</h4>
                         </div>
                         <p className="text-sm text-gray-600 mb-2">{collection.description}</p>
-                        <Badge variant="secondary">{collection.total_cards || 0} cards</Badge>
+                        <Badge variant="secondary">
+                          {collection.actual_cards || 0}/{collection.total_cards_in_set} cards
+                        </Badge>
                       </div>
                       <Button
                         variant="destructive"
@@ -620,6 +783,7 @@ function App() {
                           {card.rarity}
                         </Badge>
                         <Badge variant="outline" className="text-xs">{card.card_type}</Badge>
+                        <Badge variant="outline" className="text-xs">#{card.card_number}</Badge>
                       </div>
                     </div>
                     <Button
@@ -675,15 +839,15 @@ function App() {
               <Card>
                 <CardContent className="p-6 text-center">
                   <Trophy className="w-12 h-12 mx-auto text-yellow-500 mb-4" />
-                  <h3 className="font-bold mb-2">Collect Rare Cards</h3>
-                  <p className="text-sm text-gray-600">Hunt for Ultra Rare and Secret Rare cards</p>
+                  <h3 className="font-bold mb-2">Collect & Sort</h3>
+                  <p className="text-sm text-gray-600">Build your collection and sort by number, name, or rarity</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-6 text-center">
                   <Archive className="w-12 h-12 mx-auto text-purple-500 mb-4" />
-                  <h3 className="font-bold mb-2">Multiple Collections</h3>
-                  <p className="text-sm text-gray-600">Open packs from different card collections</p>
+                  <h3 className="font-bold mb-2">Complete Sets</h3>
+                  <p className="text-sm text-gray-600">Track missing cards and complete entire collections</p>
                 </CardContent>
               </Card>
             </div>
@@ -744,7 +908,7 @@ function App() {
                     </CardTitle>
                     <p className="text-sm text-gray-600 mt-1">{collection.description}</p>
                   </div>
-                  <Badge>{collection.total_cards || 0} cards</Badge>
+                  <Badge>{collection.actual_cards || 0}/{collection.total_cards_in_set} cards</Badge>
                 </div>
               </CardHeader>
               <CardContent>
@@ -767,7 +931,7 @@ function App() {
                   </div>
                   <Button 
                     onClick={() => openRandomPack(collection.id)} 
-                    disabled={loading || collection.total_cards === 0}
+                    disabled={loading || collection.actual_cards === 0}
                     className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
                   >
                     {loading ? 'Opening...' : (
@@ -820,6 +984,38 @@ function App() {
           </div>
         </div>
 
+        {/* Collection Controls */}
+        <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <SortAsc className="w-4 h-4" />
+              <Label htmlFor="sort-select">Sort by:</Label>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="number">Number</SelectItem>
+                  <SelectItem value="name">Name</SelectItem>
+                  <SelectItem value="rarity">Rarity</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="missing-toggle">Show missing cards:</Label>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowMissingCards(!showMissingCards)}
+              className="flex items-center gap-2"
+            >
+              {showMissingCards ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              {showMissingCards ? 'Hide' : 'Show'}
+            </Button>
+          </div>
+        </div>
+
         {userCollection.rarity_counts && Object.keys(userCollection.rarity_counts).length > 0 && (
           <Card>
             <CardHeader>
@@ -841,38 +1037,33 @@ function App() {
           </Card>
         )}
 
-        {/* Cards displayed in rows of 3 with quantity indicators */}
+        {/* Cards displayed with sorting and missing card support */}
         <div className="grid grid-cols-3 gap-6">
-          {userCollection.collected_cards && (() => {
-            // Group cards by ID and count quantities
-            const cardGroups = {};
-            userCollection.collected_cards.forEach(card => {
-              if (!cardGroups[card.id]) {
-                cardGroups[card.id] = {
-                  card: card,
-                  quantity: 0
-                };
-              }
-              cardGroups[card.id].quantity++;
-            });
-
-            return Object.values(cardGroups).map((group) => (
-              <div key={group.card.id} className="relative">
-                <CardDisplay 
-                  card={group.card} 
-                  onClick={() => setSelectedCard(group.card)}
+          {getDisplayCards().map((item) => (
+            <div key={item.card_number} className="relative">
+              {item.exists && item.owned ? (
+                <>
+                  <CardDisplay 
+                    card={item.card} 
+                    onClick={() => setSelectedCard(item.card)}
+                  />
+                  {/* Quantity indicator */}
+                  {item.quantity > 1 && (
+                    <div className="absolute -top-2 -right-2 z-10">
+                      <Badge className="bg-yellow-500 text-white font-bold px-2 py-1 text-sm shadow-lg">
+                        x{item.quantity}
+                      </Badge>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <MissingCardDisplay 
+                  cardNumber={item.card_number}
+                  totalCards={collectionOverview?.total_cards_in_set || 50}
                 />
-                {/* Quantity indicator */}
-                {group.quantity > 1 && (
-                  <div className="absolute -top-2 -right-2 z-10">
-                    <Badge className="bg-yellow-500 text-white font-bold px-2 py-1 text-sm shadow-lg">
-                      x{group.quantity}
-                    </Badge>
-                  </div>
-                )}
-              </div>
-            ));
-          })()}
+              )}
+            </div>
+          ))}
         </div>
 
         {(!userCollection.collected_cards || userCollection.collected_cards.length === 0) && (

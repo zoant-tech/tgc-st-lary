@@ -52,7 +52,7 @@ RARITY_PROBABILITIES = {
     "Secret Rare": 0.005 # 0.5% chance
 }
 
-CARDS_PER_PACK = 6  # Changed from 11 to 6 cards per pack
+CARDS_PER_PACK = 6  # 6 cards per pack
 
 # Pydantic models
 class Card(BaseModel):
@@ -61,6 +61,7 @@ class Card(BaseModel):
     rarity: str  # Common, Uncommon, Rare, Holo, Ultra Rare, Secret Rare
     card_type: str  # Pokemon, Trainer, Energy
     collection_id: str  # Which collection this card belongs to
+    card_number: int  # Card number in the collection (e.g., 1, 2, 3...)
     hp: Optional[int] = None
     attack_1: Optional[str] = None
     attack_2: Optional[str] = None
@@ -74,8 +75,8 @@ class CardCollection(BaseModel):
     id: str
     name: str
     description: str
+    total_cards_in_set: int  # Total number of cards that should be in this collection
     release_date: Optional[str] = None
-    total_cards: Optional[int] = 0
     image_url: Optional[str] = None
 
 class PackOpenRequest(BaseModel):
@@ -112,10 +113,10 @@ async def get_collections():
     try:
         collections = list(collections_db.find({}, {"_id": 0}))
         
-        # Add card counts to each collection
+        # Add actual card counts to each collection
         for collection in collections:
             card_count = cards_collection.count_documents({"collection_id": collection["id"]})
-            collection["total_cards"] = card_count
+            collection["actual_cards"] = card_count
         
         return {"collections": collections}
     except Exception as e:
@@ -151,6 +152,7 @@ async def create_card(
     rarity: str = Form(...),
     card_type: str = Form(...),
     collection_id: str = Form(...),
+    card_number: int = Form(...),
     hp: Optional[int] = Form(None),
     attack_1: Optional[str] = Form(None),
     attack_2: Optional[str] = Form(None),
@@ -161,6 +163,14 @@ async def create_card(
     image: UploadFile = File(...)
 ):
     try:
+        # Check if card number already exists in this collection
+        existing_card = cards_collection.find_one({
+            "collection_id": collection_id, 
+            "card_number": card_number
+        })
+        if existing_card:
+            raise HTTPException(status_code=400, detail=f"Card number {card_number} already exists in this collection")
+        
         # Generate unique ID and save image
         card_id = str(uuid.uuid4())
         
@@ -181,6 +191,7 @@ async def create_card(
             "rarity": rarity,
             "card_type": card_type,
             "collection_id": collection_id,
+            "card_number": card_number,
             "hp": hp,
             "attack_1": attack_1,
             "attack_2": attack_2,
@@ -199,6 +210,8 @@ async def create_card(
         
         return {"message": "Card created successfully", "card": card_data}
     
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error creating card: {str(e)}")
 
@@ -217,6 +230,51 @@ async def get_cards_by_collection(collection_id: str):
         return {"cards": cards}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching cards by collection: {str(e)}")
+
+@app.get("/api/collection-overview/{collection_id}")
+async def get_collection_overview(collection_id: str):
+    try:
+        # Get collection details
+        collection = collections_db.find_one({"id": collection_id}, {"_id": 0})
+        if not collection:
+            raise HTTPException(status_code=404, detail="Collection not found")
+        
+        # Get all cards in this collection
+        cards = list(cards_collection.find({"collection_id": collection_id}, {"_id": 0}))
+        
+        # Sort cards by card number
+        cards.sort(key=lambda x: x.get("card_number", 0))
+        
+        # Create complete overview with missing cards
+        total_cards_in_set = collection.get("total_cards_in_set", 50)
+        complete_set = []
+        
+        for i in range(1, total_cards_in_set + 1):
+            # Find card with this number
+            found_card = next((card for card in cards if card.get("card_number") == i), None)
+            if found_card:
+                complete_set.append({
+                    "card_number": i,
+                    "exists": True,
+                    "card": found_card
+                })
+            else:
+                complete_set.append({
+                    "card_number": i,
+                    "exists": False,
+                    "card": None
+                })
+        
+        return {
+            "collection": collection,
+            "complete_set": complete_set,
+            "total_cards_in_set": total_cards_in_set,
+            "actual_cards_created": len(cards)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching collection overview: {str(e)}")
 
 @app.delete("/api/cards/{card_id}")
 async def delete_card(card_id: str):
