@@ -124,7 +124,10 @@ async def create_card(
         }
         
         # Insert into MongoDB
-        cards_collection.insert_one(card_data)
+        result = cards_collection.insert_one(card_data)
+        
+        # Remove the MongoDB _id field from response to avoid serialization issues
+        card_data.pop('_id', None)
         
         return {"message": "Card created successfully", "card": card_data}
     
