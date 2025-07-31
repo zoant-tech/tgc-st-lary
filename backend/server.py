@@ -31,7 +31,7 @@ db = client[db_name]
 
 # Collections
 cards_collection = db.cards
-packs_collection = db.booster_packs
+collections_db = db.card_collections  # Renamed to avoid conflict with MongoDB collections
 users_collection = db.users
 user_collections_collection = db.user_collections
 
@@ -42,12 +42,25 @@ uploads_dir.mkdir(exist_ok=True)
 # Serve static files
 app.mount("/uploads", StaticFiles(directory="/app/backend/uploads"), name="uploads")
 
+# Rarity probabilities (like real Pokémon packs)
+RARITY_PROBABILITIES = {
+    "Common": 0.65,      # 65% chance
+    "Uncommon": 0.20,    # 20% chance
+    "Rare": 0.10,        # 10% chance
+    "Holo": 0.03,        # 3% chance
+    "Ultra Rare": 0.015, # 1.5% chance
+    "Secret Rare": 0.005 # 0.5% chance
+}
+
+CARDS_PER_PACK = 11  # Standard pack size
+
 # Pydantic models
 class Card(BaseModel):
     id: str
     name: str
     rarity: str  # Common, Uncommon, Rare, Holo, Ultra Rare, Secret Rare
     card_type: str  # Pokemon, Trainer, Energy
+    collection_id: str  # Which collection this card belongs to
     hp: Optional[int] = None
     attack_1: Optional[str] = None
     attack_2: Optional[str] = None
@@ -57,22 +70,16 @@ class Card(BaseModel):
     image_url: str
     set_name: Optional[str] = None
 
-class RarityDistribution(BaseModel):
-    rarity: str
-    count: int
-    guaranteed: bool = False
-
-class BoosterPack(BaseModel):
+class CardCollection(BaseModel):
     id: str
     name: str
     description: str
-    card_count: int
-    rarity_distribution: List[RarityDistribution]
-    available_cards: List[str]  # Card IDs
+    release_date: Optional[str] = None
+    total_cards: Optional[int] = 0
     image_url: Optional[str] = None
 
 class PackOpenRequest(BaseModel):
-    pack_id: str
+    collection_id: str
     user_id: Optional[str] = "default_user"
 
 class UserCollection(BaseModel):
@@ -87,11 +94,39 @@ class UserCollection(BaseModel):
 async def health_check():
     return {"status": "healthy", "message": "TCG Pocket API is running"}
 
+@app.post("/api/collections")
+async def create_collection(collection: CardCollection):
+    try:
+        collection_data = collection.dict()
+        result = collections_db.insert_one(collection_data)
+        
+        # Remove the MongoDB _id field from response to avoid serialization issues
+        collection_data.pop('_id', None)
+        
+        return {"message": "Collection created successfully", "collection": collection_data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating collection: {str(e)}")
+
+@app.get("/api/collections")
+async def get_collections():
+    try:
+        collections = list(collections_db.find({}, {"_id": 0}))
+        
+        # Add card counts to each collection
+        for collection in collections:
+            card_count = cards_collection.count_documents({"collection_id": collection["id"]})
+            collection["total_cards"] = card_count
+        
+        return {"collections": collections}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching collections: {str(e)}")
+
 @app.post("/api/cards")
 async def create_card(
     name: str = Form(...),
     rarity: str = Form(...),
     card_type: str = Form(...),
+    collection_id: str = Form(...),
     hp: Optional[int] = Form(None),
     attack_1: Optional[str] = Form(None),
     attack_2: Optional[str] = Form(None),
@@ -121,6 +156,7 @@ async def create_card(
             "name": name,
             "rarity": rarity,
             "card_type": card_type,
+            "collection_id": collection_id,
             "hp": hp,
             "attack_1": attack_1,
             "attack_2": attack_2,
@@ -150,100 +186,71 @@ async def get_cards():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching cards: {str(e)}")
 
-@app.get("/api/cards/{card_id}")
-async def get_card(card_id: str):
+@app.get("/api/cards/collection/{collection_id}")
+async def get_cards_by_collection(collection_id: str):
     try:
-        card = cards_collection.find_one({"id": card_id}, {"_id": 0})
-        if not card:
-            raise HTTPException(status_code=404, detail="Card not found")
-        return {"card": card}
-    except HTTPException:
-        raise
+        cards = list(cards_collection.find({"collection_id": collection_id}, {"_id": 0}))
+        return {"cards": cards}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching card: {str(e)}")
-
-@app.post("/api/booster-packs")
-async def create_booster_pack(pack: BoosterPack):
-    try:
-        pack_data = pack.dict()
-        result = packs_collection.insert_one(pack_data)
-        
-        # Remove the MongoDB _id field from response to avoid serialization issues
-        pack_data.pop('_id', None)
-        
-        return {"message": "Booster pack created successfully", "pack": pack_data}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error creating booster pack: {str(e)}")
-
-@app.get("/api/booster-packs")
-async def get_booster_packs():
-    try:
-        packs = list(packs_collection.find({}, {"_id": 0}))
-        return {"packs": packs}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching booster packs: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching cards by collection: {str(e)}")
 
 @app.post("/api/open-pack")
 async def open_pack(request: PackOpenRequest):
     try:
-        # Get pack details
-        pack = packs_collection.find_one({"id": request.pack_id}, {"_id": 0})
-        if not pack:
-            raise HTTPException(status_code=404, detail="Booster pack not found")
+        # Get collection details
+        collection = collections_db.find_one({"id": request.collection_id}, {"_id": 0})
+        if not collection:
+            raise HTTPException(status_code=404, detail="Collection not found")
         
-        # Get available cards for this pack
-        available_card_ids = pack["available_cards"]
-        if not available_card_ids:
-            raise HTTPException(status_code=400, detail="No cards available in this pack")
-        
-        # Get cards from database
+        # Get all cards from this collection
         available_cards = list(cards_collection.find(
-            {"id": {"$in": available_card_ids}}, 
+            {"collection_id": request.collection_id}, 
             {"_id": 0}
         ))
         
         if not available_cards:
-            raise HTTPException(status_code=400, detail="No valid cards found for this pack")
+            raise HTTPException(status_code=400, detail="No cards available in this collection")
         
-        # Generate pack contents based on rarity distribution
+        # Group cards by rarity for easier selection
+        cards_by_rarity = {}
+        for card in available_cards:
+            rarity = card["rarity"]
+            if rarity not in cards_by_rarity:
+                cards_by_rarity[rarity] = []
+            cards_by_rarity[rarity].append(card)
+        
+        # Generate random pack contents based on probabilities
         pulled_cards = []
         
-        for distribution in pack["rarity_distribution"]:
-            rarity = distribution["rarity"]
-            count = distribution["count"]
-            guaranteed = distribution.get("guaranteed", False)
+        for _ in range(CARDS_PER_PACK):
+            # Generate random number to determine rarity based on probabilities
+            rand = random.random()
+            cumulative_prob = 0
+            selected_rarity = "Common"  # default fallback
             
-            # Filter cards by rarity
-            rarity_cards = [card for card in available_cards if card["rarity"] == rarity]
+            for rarity, prob in RARITY_PROBABILITIES.items():
+                cumulative_prob += prob
+                if rand <= cumulative_prob:
+                    selected_rarity = rarity
+                    break
             
-            if guaranteed and not rarity_cards:
-                # If guaranteed but no cards of this rarity, skip
-                continue
-            
-            if guaranteed and rarity_cards:
-                # If guaranteed, ensure we get at least one of this rarity
-                selected = random.sample(rarity_cards, min(count, len(rarity_cards)))
-                pulled_cards.extend(selected)
-            elif rarity_cards:
-                # Normal probability-based selection
-                for _ in range(count):
-                    if rarity_cards:
-                        selected_card = random.choice(rarity_cards)
-                        pulled_cards.append(selected_card)
-        
-        # Fill remaining slots with random cards if needed
-        target_count = pack["card_count"]
-        while len(pulled_cards) < target_count and available_cards:
-            random_card = random.choice(available_cards)
-            pulled_cards.append(random_card)
+            # Select a random card of the chosen rarity
+            if selected_rarity in cards_by_rarity and cards_by_rarity[selected_rarity]:
+                selected_card = random.choice(cards_by_rarity[selected_rarity])
+                pulled_cards.append(selected_card)
+            else:
+                # Fallback to any available card if selected rarity not available
+                if available_cards:
+                    selected_card = random.choice(available_cards)
+                    pulled_cards.append(selected_card)
         
         # Add cards to user's collection
         await add_cards_to_collection(request.user_id, pulled_cards)
         
         return {
             "message": "Pack opened successfully!",
-            "pack_name": pack["name"],
-            "cards": pulled_cards[:target_count]  # Ensure we don't exceed target count
+            "collection_name": collection["name"],
+            "cards": pulled_cards
         }
     
     except HTTPException:
@@ -297,7 +304,8 @@ async def get_user_collection(user_id: str):
                 "collected_cards": [],
                 "total_packs_opened": 0,
                 "unique_cards": 0,
-                "rarity_counts": {}
+                "rarity_counts": {},
+                "collection_stats": {}
             }
         
         # Calculate statistics
@@ -310,13 +318,27 @@ async def get_user_collection(user_id: str):
             rarity = card.get("rarity", "Unknown")
             rarity_counts[rarity] = rarity_counts.get(rarity, 0) + 1
         
+        # Count cards by collection
+        collection_stats = {}
+        for card in collected_cards:
+            coll_id = card.get("collection_id", "Unknown")
+            if coll_id not in collection_stats:
+                collection_stats[coll_id] = {"count": 0, "unique": set()}
+            collection_stats[coll_id]["count"] += 1
+            collection_stats[coll_id]["unique"].add(card["id"])
+        
+        # Convert sets to counts for JSON serialization
+        for coll_id in collection_stats:
+            collection_stats[coll_id]["unique"] = len(collection_stats[coll_id]["unique"])
+        
         return {
             "user_id": user_id,
             "collected_cards": collected_cards,
             "total_packs_opened": collection.get("total_packs_opened", 0),
             "unique_cards": unique_cards,
             "total_cards": len(collected_cards),
-            "rarity_counts": rarity_counts
+            "rarity_counts": rarity_counts,
+            "collection_stats": collection_stats
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching user collection: {str(e)}")
@@ -342,6 +364,13 @@ async def get_card_types():
             "Trainer",
             "Energy"
         ]
+    }
+
+@app.get("/api/pack-probabilities")
+async def get_pack_probabilities():
+    return {
+        "probabilities": RARITY_PROBABILITIES,
+        "cards_per_pack": CARDS_PER_PACK
     }
 
 if __name__ == "__main__":

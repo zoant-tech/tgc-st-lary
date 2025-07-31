@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from './components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { Switch } from './components/ui/switch';
-import { PlusCircle, Package, Sparkles, Star, Zap, Crown, Diamond, Settings, Trophy, Home, Gift } from 'lucide-react';
+import { PlusCircle, Package, Sparkles, Star, Zap, Crown, Diamond, Settings, Trophy, Home, Gift, Archive, Dice6 } from 'lucide-react';
 import './App.css';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -27,7 +27,7 @@ const RARITY_CONFIG = {
 function App() {
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [cards, setCards] = useState([]);
-  const [boosterPacks, setBoosterPacks] = useState([]);
+  const [collections, setCollections] = useState([]);
   const [userCollection, setUserCollection] = useState({});
   const [pulledCards, setPulledCards] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -35,11 +35,19 @@ function App() {
   const [showPackAnimation, setShowPackAnimation] = useState(false);
   const [animatingCards, setAnimatingCards] = useState([]);
 
+  // Collection creation form state
+  const [collectionForm, setCollectionForm] = useState({
+    name: '',
+    description: '',
+    release_date: ''
+  });
+
   // Card creation form state
   const [cardForm, setCardForm] = useState({
     name: '',
     rarity: 'Common',
     card_type: 'Pokemon',
+    collection_id: '',
     hp: '',
     attack_1: '',
     attack_2: '',
@@ -50,23 +58,9 @@ function App() {
     image: null
   });
 
-  // Pack creation form state
-  const [packForm, setPackForm] = useState({
-    name: '',
-    description: '',
-    card_count: 11,
-    rarity_distribution: [
-      { rarity: 'Common', count: 6, guaranteed: false },
-      { rarity: 'Uncommon', count: 3, guaranteed: false },
-      { rarity: 'Rare', count: 1, guaranteed: true },
-      { rarity: 'Holo', count: 1, guaranteed: false }
-    ],
-    available_cards: []
-  });
-
   useEffect(() => {
     fetchCards();
-    fetchBoosterPacks();
+    fetchCollections();
     if (!isAdminMode) {
       fetchUserCollection();
     }
@@ -75,7 +69,7 @@ function App() {
   useEffect(() => {
     // Reset to appropriate tab when switching modes
     if (isAdminMode) {
-      setActiveTab('create-card');
+      setActiveTab('create-collection');
     } else {
       setActiveTab('welcome');
     }
@@ -91,13 +85,13 @@ function App() {
     }
   };
 
-  const fetchBoosterPacks = async () => {
+  const fetchCollections = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/booster-packs`);
+      const response = await fetch(`${BACKEND_URL}/api/collections`);
       const data = await response.json();
-      setBoosterPacks(data.packs || []);
+      setCollections(data.collections || []);
     } catch (error) {
-      console.error('Error fetching booster packs:', error);
+      console.error('Error fetching collections:', error);
     }
   };
 
@@ -111,10 +105,52 @@ function App() {
     }
   };
 
+  const handleCollectionSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const collectionData = {
+        id: Date.now().toString(),
+        name: collectionForm.name,
+        description: collectionForm.description,
+        release_date: collectionForm.release_date
+      };
+
+      const response = await fetch(`${BACKEND_URL}/api/collections`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(collectionData)
+      });
+
+      if (response.ok) {
+        setCollectionForm({
+          name: '',
+          description: '',
+          release_date: ''
+        });
+        fetchCollections();
+        alert('Collection created successfully!');
+      } else {
+        alert('Error creating collection');
+      }
+    } catch (error) {
+      console.error('Error creating collection:', error);
+      alert('Error creating collection');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCardSubmit = async (e) => {
     e.preventDefault();
     if (!cardForm.image) {
       alert('Please select an image for the card');
+      return;
+    }
+    if (!cardForm.collection_id) {
+      alert('Please select a collection for the card');
       return;
     }
 
@@ -137,6 +173,7 @@ function App() {
           name: '',
           rarity: 'Common',
           card_type: 'Pokemon',
+          collection_id: '',
           hp: '',
           attack_1: '',
           attack_2: '',
@@ -147,6 +184,7 @@ function App() {
           image: null
         });
         fetchCards();
+        fetchCollections(); // Refresh to update card counts
         alert('Card created successfully!');
       } else {
         alert('Error creating card');
@@ -159,55 +197,8 @@ function App() {
     }
   };
 
-  const handlePackSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const packData = {
-        id: Date.now().toString(),
-        name: packForm.name,
-        description: packForm.description,
-        card_count: parseInt(packForm.card_count),
-        rarity_distribution: packForm.rarity_distribution,
-        available_cards: packForm.available_cards
-      };
-
-      const response = await fetch(`${BACKEND_URL}/api/booster-packs`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(packData)
-      });
-
-      if (response.ok) {
-        setPackForm({
-          name: '',
-          description: '',
-          card_count: 11,
-          rarity_distribution: [
-            { rarity: 'Common', count: 6, guaranteed: false },
-            { rarity: 'Uncommon', count: 3, guaranteed: false },
-            { rarity: 'Rare', count: 1, guaranteed: true },
-            { rarity: 'Holo', count: 1, guaranteed: false }
-          ],
-          available_cards: []
-        });
-        fetchBoosterPacks();
-        alert('Booster pack created successfully!');
-      } else {
-        alert('Error creating booster pack');
-      }
-    } catch (error) {
-      console.error('Error creating booster pack:', error);
-      alert('Error creating booster pack');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const openPack = async (packId) => {
-    console.log('openPack function called with packId:', packId);
+  const openRandomPack = async (collectionId) => {
+    console.log('Opening random pack from collection:', collectionId);
     setLoading(true);
     setShowPackAnimation(true);
     setPulledCards([]);
@@ -219,7 +210,7 @@ function App() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ pack_id: packId, user_id: USER_ID })
+        body: JSON.stringify({ collection_id: collectionId, user_id: USER_ID })
       });
 
       console.log('API response status:', response.status);
@@ -285,10 +276,61 @@ function App() {
   const AdminTabs = () => (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
       <TabsList className="grid w-full grid-cols-3 bg-white rounded-xl p-1 shadow-sm">
+        <TabsTrigger value="create-collection" className="rounded-lg">Create Collection</TabsTrigger>
         <TabsTrigger value="create-card" className="rounded-lg">Create Card</TabsTrigger>
-        <TabsTrigger value="create-pack" className="rounded-lg">Create Pack</TabsTrigger>
         <TabsTrigger value="manage" className="rounded-lg">Manage Content</TabsTrigger>
       </TabsList>
+
+      {/* Create Collection Tab */}
+      <TabsContent value="create-collection">
+        <Card className="max-w-2xl mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Archive className="w-5 h-5" />
+              Create New Collection
+            </CardTitle>
+            <p className="text-sm text-gray-600">
+              Collections are like card sets (e.g., "Rubies", "Base Set"). Users will open random packs from these collections.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleCollectionSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="collection-name">Collection Name</Label>
+                <Input
+                  id="collection-name"
+                  placeholder="e.g., Rubies, Crystal Collection, Base Set"
+                  value={collectionForm.name}
+                  onChange={(e) => setCollectionForm({...collectionForm, name: e.target.value})}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="collection-description">Description</Label>
+                <Input
+                  id="collection-description"
+                  placeholder="Describe this collection..."
+                  value={collectionForm.description}
+                  onChange={(e) => setCollectionForm({...collectionForm, description: e.target.value})}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="release-date">Release Date (Optional)</Label>
+                <Input
+                  id="release-date"
+                  type="date"
+                  value={collectionForm.release_date}
+                  onChange={(e) => setCollectionForm({...collectionForm, release_date: e.target.value})}
+                />
+              </div>
+              <Button type="submit" disabled={loading} className="w-full">
+                {loading ? 'Creating...' : 'Create Collection'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </TabsContent>
 
       {/* Create Card Tab */}
       <TabsContent value="create-card">
@@ -298,6 +340,9 @@ function App() {
               <PlusCircle className="w-5 h-5" />
               Create New Card
             </CardTitle>
+            <p className="text-sm text-gray-600">
+              Add cards to your collections. Users will randomly receive these cards when opening packs.
+            </p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleCardSubmit} className="space-y-4">
@@ -310,6 +355,21 @@ function App() {
                     onChange={(e) => setCardForm({...cardForm, name: e.target.value})}
                     required
                   />
+                </div>
+                <div>
+                  <Label htmlFor="collection">Collection</Label>
+                  <Select value={cardForm.collection_id} onValueChange={(value) => setCardForm({...cardForm, collection_id: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select collection" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {collections.map(collection => (
+                        <SelectItem key={collection.id} value={collection.id}>
+                          {collection.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="rarity">Rarity</Label>
@@ -362,86 +422,8 @@ function App() {
                   required
                 />
               </div>
-              <Button type="submit" disabled={loading} className="w-full">
+              <Button type="submit" disabled={loading || !cardForm.collection_id} className="w-full">
                 {loading ? 'Creating...' : 'Create Card'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </TabsContent>
-
-      {/* Create Pack Tab */}
-      <TabsContent value="create-pack">
-        <Card className="max-w-4xl mx-auto">
-          <CardHeader>
-            <CardTitle>Create Booster Pack</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handlePackSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="pack-name">Pack Name</Label>
-                  <Input
-                    id="pack-name"
-                    value={packForm.name}
-                    onChange={(e) => setPackForm({...packForm, name: e.target.value})}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="card-count">Cards per Pack</Label>
-                  <Input
-                    id="card-count"
-                    type="number"
-                    min="1"
-                    max="20"
-                    value={packForm.card_count}
-                    onChange={(e) => setPackForm({...packForm, card_count: e.target.value})}
-                    required
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Input
-                  id="description"
-                  value={packForm.description}
-                  onChange={(e) => setPackForm({...packForm, description: e.target.value})}
-                  required
-                />
-              </div>
-              <div>
-                <Label>Available Cards</Label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 max-h-64 overflow-y-auto border rounded-lg p-4">
-                  {cards.map((card) => (
-                    <div key={card.id} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id={`card-${card.id}`}
-                        checked={packForm.available_cards.includes(card.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setPackForm({
-                              ...packForm,
-                              available_cards: [...packForm.available_cards, card.id]
-                            });
-                          } else {
-                            setPackForm({
-                              ...packForm,
-                              available_cards: packForm.available_cards.filter(id => id !== card.id)
-                            });
-                          }
-                        }}
-                      />
-                      <label htmlFor={`card-${card.id}`} className="text-sm">
-                        {card.name}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <Button type="submit" disabled={loading || packForm.available_cards.length === 0} className="w-full">
-                {loading ? 'Creating...' : 'Create Booster Pack'}
               </Button>
             </form>
           </CardContent>
@@ -453,29 +435,38 @@ function App() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>Created Cards ({cards.length})</CardTitle>
+              <CardTitle>Collections ({collections.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {collections.map((collection) => (
+                  <div key={collection.id} className="border rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Archive className="w-5 h-5 text-blue-500" />
+                      <h4 className="font-bold">{collection.name}</h4>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-2">{collection.description}</p>
+                    <Badge variant="secondary">{collection.total_cards || 0} cards</Badge>
+                  </div>
+                ))}
+                {collections.length === 0 && (
+                  <p className="text-gray-500 text-center">No collections created yet</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>All Cards ({cards.length})</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4 max-h-96 overflow-y-auto">
                 {cards.map((card) => (
                   <CardDisplay key={card.id} card={card} className="scale-75" />
                 ))}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Created Packs ({boosterPacks.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4 max-h-96 overflow-y-auto">
-                {boosterPacks.map((pack) => (
-                  <div key={pack.id} className="border rounded-lg p-4">
-                    <h4 className="font-bold">{pack.name}</h4>
-                    <p className="text-sm text-gray-600">{pack.description}</p>
-                    <Badge>{pack.card_count} cards</Badge>
-                  </div>
-                ))}
+                {cards.length === 0 && (
+                  <p className="text-gray-500 text-center col-span-2">No cards created yet</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -502,29 +493,29 @@ function App() {
               Welcome to TCG Pocket!
             </h2>
             <p className="text-xl text-gray-600 mb-8">
-              Open exciting booster packs and collect amazing cards!
+              Choose a collection and open random booster packs. Each pack contains 11 cards with varying rarities - will you get lucky?
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               <Card>
                 <CardContent className="p-6 text-center">
-                  <Package className="w-12 h-12 mx-auto text-blue-500 mb-4" />
-                  <h3 className="font-bold mb-2">Open Packs</h3>
-                  <p className="text-sm text-gray-600">Discover new cards in exciting booster packs</p>
+                  <Dice6 className="w-12 h-12 mx-auto text-blue-500 mb-4" />
+                  <h3 className="font-bold mb-2">Random Packs</h3>
+                  <p className="text-sm text-gray-600">Each pack is completely random - luck determines your cards!</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-6 text-center">
                   <Trophy className="w-12 h-12 mx-auto text-yellow-500 mb-4" />
-                  <h3 className="font-bold mb-2">Collect Cards</h3>
-                  <p className="text-sm text-gray-600">Build your collection with rare and powerful cards</p>
+                  <h3 className="font-bold mb-2">Collect Rare Cards</h3>
+                  <p className="text-sm text-gray-600">Hunt for Ultra Rare and Secret Rare cards</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-6 text-center">
-                  <Sparkles className="w-12 h-12 mx-auto text-purple-500 mb-4" />
-                  <h3 className="font-bold mb-2">Showcase</h3>
-                  <p className="text-sm text-gray-600">Show off your amazing card collection</p>
+                  <Archive className="w-12 h-12 mx-auto text-purple-500 mb-4" />
+                  <h3 className="font-bold mb-2">Multiple Collections</h3>
+                  <p className="text-sm text-gray-600">Open packs from different card collections</p>
                 </CardContent>
               </Card>
             </div>
@@ -568,38 +559,50 @@ function App() {
 
       {/* Open Packs Tab */}
       <TabsContent value="open-packs" className="space-y-6">
-        <h2 className="text-2xl font-bold">Available Booster Packs</h2>
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-bold mb-2">Choose a Collection</h2>
+          <p className="text-gray-600">Each pack contains 11 random cards with different rarity chances</p>
+        </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {boosterPacks.map((pack) => (
-            <Card key={pack.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+          {collections.map((collection) => (
+            <Card key={collection.id} className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle className="text-lg">{pack.name}</CardTitle>
-                    <p className="text-sm text-gray-600 mt-1">{pack.description}</p>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Archive className="w-5 h-5" />
+                      {collection.name}
+                    </CardTitle>
+                    <p className="text-sm text-gray-600 mt-1">{collection.description}</p>
                   </div>
-                  <Badge>{pack.card_count} cards</Badge>
+                  <Badge>{collection.total_cards || 0} cards</Badge>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   <div>
-                    <p className="text-sm font-medium mb-2">Rarity Distribution:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {pack.rarity_distribution.map((dist, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {dist.count}x {dist.rarity}
-                          {dist.guaranteed && <span className="text-yellow-500 ml-1">★</span>}
-                        </Badge>
-                      ))}
+                    <p className="text-sm font-medium mb-2">Rarity Chances per Pack:</p>
+                    <div className="grid grid-cols-2 gap-1 text-xs">
+                      <Badge variant="outline">65% Common</Badge>
+                      <Badge variant="outline">20% Uncommon</Badge>
+                      <Badge variant="outline">10% Rare</Badge>
+                      <Badge variant="outline">3% Holo</Badge>
+                      <Badge variant="outline">1.5% Ultra Rare</Badge>
+                      <Badge variant="outline">0.5% Secret Rare</Badge>
                     </div>
                   </div>
                   <Button 
-                    onClick={() => openPack(pack.id)} 
-                    disabled={loading}
+                    onClick={() => openRandomPack(collection.id)} 
+                    disabled={loading || collection.total_cards === 0}
                     className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
                   >
-                    {loading ? 'Opening...' : 'Open Pack'}
+                    {loading ? 'Opening...' : (
+                      <span className="flex items-center gap-2">
+                        <Dice6 className="w-4 h-4" />
+                        Open Random Pack (11 cards)
+                      </span>
+                    )}
                   </Button>
                 </div>
               </CardContent>
@@ -612,7 +615,7 @@ function App() {
           <div className="mt-8">
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-yellow-500" />
-              Cards Pulled!
+              Cards You Got! (Lucky Pull!)
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {pulledCards.map((card, index) => (
@@ -622,10 +625,10 @@ function App() {
           </div>
         )}
 
-        {boosterPacks.length === 0 && (
+        {collections.length === 0 && (
           <div className="text-center py-12">
             <Package className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-600">No booster packs available yet. Check back soon!</p>
+            <p className="text-gray-600">No collections available yet. Check back soon!</p>
           </div>
         )}
       </TabsContent>
@@ -702,7 +705,7 @@ function App() {
                   TCG Pocket
                 </h1>
                 <p className="text-gray-600">
-                  {isAdminMode ? 'Admin Panel - Create and manage content' : 'Open packs and collect amazing cards!'}
+                  {isAdminMode ? 'Admin Panel - Create collections and cards' : 'Open random packs and collect amazing cards!'}
                 </p>
               </div>
             </div>
@@ -736,7 +739,8 @@ function App() {
                 />
               </div>
             </div>
-            <h2 className="text-3xl font-bold text-white mb-4">Opening Pack...</h2>
+            <h2 className="text-3xl font-bold text-white mb-4">Opening Random Pack...</h2>
+            <p className="text-white mb-4">🎲 Rolling for your luck! 🎲</p>
             <div className="flex justify-center space-x-4">
               {animatingCards.map((card, index) => (
                 <div 
