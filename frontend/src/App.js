@@ -954,34 +954,53 @@ function App() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4 max-h-96 overflow-y-auto">
-                {cards.map((card) => (
-                  <div key={card.id} className="flex items-center gap-4 border rounded-lg p-3">
-                    <img 
-                      src={`${BACKEND_URL}${card.image_url}`} 
-                      alt={card.name}
-                      className="w-16 h-20 object-cover rounded"
-                    />
-                    <div className="flex-1">
-                      <h4 className="font-bold">{card.name}</h4>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge className={`${RARITY_CONFIG[card.rarity]?.color || 'bg-gray-100'} flex items-center gap-1 text-xs`}>
-                          {RARITY_CONFIG[card.rarity]?.icon}
-                          {card.rarity}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">{card.card_type}</Badge>
-                        <Badge variant="outline" className="text-xs">#{card.card_number}</Badge>
+                {cards.map((card) => {
+                  // Generate a color based on card rarity for admin thumbnails
+                  const getRarityColor = (rarity) => {
+                    const colors = {
+                      'Common': '#94a3b8',
+                      'Uncommon': '#22c55e', 
+                      'Rare': '#3b82f6',
+                      'Holo': '#8b5cf6',
+                      'Ultra Rare': '#eab308',
+                      'Secret Rare': '#ec4899'
+                    };
+                    return colors[rarity] || '#94a3b8';
+                  };
+
+                  return (
+                    <div key={card.id} className="flex items-center gap-4 border rounded-lg p-3">
+                      <div 
+                        className="w-16 h-20 rounded flex items-center justify-center text-white text-xs font-bold"
+                        style={{ backgroundColor: getRarityColor(card.rarity) }}
+                      >
+                        <div className="text-center">
+                          <div className="text-xs">{card.name.substring(0, 8)}</div>
+                          <div className="text-xs opacity-75">#{card.card_number}</div>
+                        </div>
                       </div>
+                      <div className="flex-1">
+                        <h4 className="font-bold">{card.name}</h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge className={`${RARITY_CONFIG[card.rarity]?.color || 'bg-gray-100'} flex items-center gap-1 text-xs`}>
+                            {RARITY_CONFIG[card.rarity]?.icon}
+                            {card.rarity}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">{card.card_type}</Badge>
+                          <Badge variant="outline" className="text-xs">#{card.card_number}</Badge>
+                        </div>
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteCard(card.id, card.name)}
+                        disabled={loading}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteCard(card.id, card.name)}
-                      disabled={loading}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
+                  );
+                })}
                 {cards.length === 0 && (
                   <p className="text-gray-500 text-center">No cards created yet</p>
                 )}
