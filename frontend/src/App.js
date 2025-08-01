@@ -960,7 +960,7 @@ function App() {
                 </div>
                 <div>
                   <Label htmlFor="card_type">Card Type</Label>
-                  <Select value={cardForm.card_type} onValueChange={(value) => setCardForm({...cardForm, card_type: value})}>
+                  <Select value={cardForm.card_type} onValueChange={(value) => handleCardFormChange('card_type', value)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
