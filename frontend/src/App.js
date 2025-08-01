@@ -24,6 +24,11 @@ const RARITY_CONFIG = {
 };
 
 function App() {
+  // User authentication state
+  const [currentUser, setCurrentUser] = useState('');
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [tempUsername, setTempUsername] = useState('');
+  
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [cards, setCards] = useState([]);
   const [collections, setCollections] = useState([]);
