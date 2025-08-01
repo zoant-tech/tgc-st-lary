@@ -368,6 +368,8 @@ function App() {
   };
 
   const openRandomPack = async (collectionId) => {
+    if (!currentUser) return;
+    
     console.log('Opening random pack from collection:', collectionId);
     setLoading(true);
     setShowPackAnimation(true);
@@ -380,7 +382,7 @@ function App() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ collection_id: collectionId, user_id: USER_ID })
+        body: JSON.stringify({ collection_id: collectionId, user_id: currentUser })
       });
 
       console.log('API response status:', response.status);
