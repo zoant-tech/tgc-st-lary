@@ -1412,17 +1412,36 @@ function App() {
               </div>
             </div>
             
-            {/* Mode Toggle */}
-            <div className="flex items-center space-x-3">
-              <Settings className={`w-5 h-5 ${isAdminMode ? 'text-orange-500' : 'text-gray-400'}`} />
-              <Switch 
-                checked={isAdminMode} 
-                onCheckedChange={setIsAdminMode}
-                className="data-[state=checked]:bg-orange-500"
-              />
-              <span className={`text-sm ${isAdminMode ? 'text-orange-600 font-medium' : 'text-gray-600'}`}>
-                {isAdminMode ? 'Admin Mode' : 'User Mode'}
-              </span>
+            {/* Mode Toggle and User Info */}
+            <div className="flex items-center space-x-4">
+              {/* Current User Display */}
+              {currentUser && (
+                <div className="flex items-center space-x-2 text-sm">
+                  <User className="w-4 h-4 text-blue-500" />
+                  <span className="text-gray-700">Welcome, <strong>{currentUser}</strong></span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleLogout}
+                    className="text-gray-500 hover:text-red-500"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+              
+              {/* Admin Mode Toggle */}
+              <div className="flex items-center space-x-3">
+                <Settings className={`w-5 h-5 ${isAdminMode ? 'text-orange-500' : 'text-gray-400'}`} />
+                <Switch 
+                  checked={isAdminMode} 
+                  onCheckedChange={setIsAdminMode}
+                  className="data-[state=checked]:bg-orange-500"
+                />
+                <span className={`text-sm ${isAdminMode ? 'text-orange-600 font-medium' : 'text-gray-600'}`}>
+                  {isAdminMode ? 'Admin Mode' : 'User Mode'}
+                </span>
+              </div>
             </div>
           </div>
         </div>
