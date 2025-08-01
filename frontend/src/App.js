@@ -648,16 +648,21 @@ function App() {
               )}
             </div>
             <div className="p-6 bg-white">
-              <h2 className="text-2xl font-bold mb-2">{card.name}</h2>
-              <div className="space-y-2">
-                {card.card_number && (
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">Card Number:</span>
-                    <span className="font-bold text-blue-600">
+              <h2 className="text-2xl font-bold mb-4">{card.name}</h2>
+              
+              {/* Card Number - Make it prominent */}
+              {card.card_number && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                  <div className="text-center">
+                    <span className="text-sm text-blue-600 font-medium">Card Number</span>
+                    <div className="text-2xl font-bold text-blue-700">
                       {card.card_number}/{collectionOverview?.total_cards_in_set || 50}
-                    </span>
+                    </div>
                   </div>
-                )}
+                </div>
+              )}
+              
+              <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Type:</span>
                   <span>{card.card_type}</span>
