@@ -146,6 +146,51 @@ async def delete_collection(collection_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting collection: {str(e)}")
 
+@app.post("/api/cards-from-url")
+async def create_card_from_url(card_data: dict):
+    try:
+        # Generate unique ID
+        card_id = str(uuid.uuid4())
+        
+        # Create card document with URL-based image
+        card_document = {
+            "id": card_id,
+            "name": card_data["name"],
+            "rarity": card_data["rarity"],
+            "card_type": card_data["card_type"],
+            "collection_id": card_data["collection_id"],
+            "card_number": card_data["card_number"],
+            "hp": card_data.get("hp"),
+            "attack_1": card_data.get("attack_1"),
+            "attack_2": card_data.get("attack_2"),
+            "weakness": card_data.get("weakness"),
+            "resistance": card_data.get("resistance"),
+            "description": card_data.get("description"),
+            "image_url": card_data["image_url"],  # Use the provided URL directly
+            "set_name": card_data.get("set_name")
+        }
+        
+        # Check if card number already exists in this collection
+        existing_card = cards_collection.find_one({
+            "collection_id": card_data["collection_id"], 
+            "card_number": card_data["card_number"]
+        })
+        if existing_card:
+            raise HTTPException(status_code=400, detail=f"Card number {card_data['card_number']} already exists in this collection")
+        
+        # Insert into MongoDB
+        result = cards_collection.insert_one(card_document)
+        
+        # Remove the MongoDB _id field from response to avoid serialization issues
+        card_document.pop('_id', None)
+        
+        return {"message": "Card created successfully from URL", "card": card_document}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating card from URL: {str(e)}")
+
 @app.post("/api/cards")
 async def create_card(
     name: str = Form(...),
