@@ -128,9 +128,30 @@ function App() {
     }
   };
 
+  const handleWelcomeSubmit = () => {
+    if (tempUsername.trim()) {
+      const username = tempUsername.trim();
+      setCurrentUser(username);
+      localStorage.setItem('tcg-username', username);
+      setShowWelcomeModal(false);
+      setTempUsername('');
+    }
+  };
+
+  const handleLogout = () => {
+    setCurrentUser('');
+    localStorage.removeItem('tcg-username');
+    setUserCollection({});
+    setPulledCards([]);
+    setShowWelcomeModal(true);
+    setActiveTab('welcome');
+  };
+
   const fetchUserCollection = async () => {
+    if (!currentUser) return;
+    
     try {
-      const response = await fetch(`${BACKEND_URL}/api/user-collection/${USER_ID}`);
+      const response = await fetch(`${BACKEND_URL}/api/user-collection/${currentUser}`);
       const data = await response.json();
       setUserCollection(data);
     } catch (error) {
