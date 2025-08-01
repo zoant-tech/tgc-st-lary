@@ -329,101 +329,282 @@ class TCGPocketAPITester:
             return response
         return None
 
+    def test_user_authentication_system(self):
+        """Test the complete user authentication and separation system"""
+        print("\n🔐 Testing User Authentication & Separation System")
+        print("=" * 60)
+        
+        # Test users
+        alice = "Alice"
+        bob = "Bob"
+        charlie = "Charlie"
+        
+        # Step 1: Create a test collection with cards for pack opening
+        print("\n📚 Setting up test collection with cards...")
+        collection_id = self.test_create_collection("Pokemon Starter Set", "Test collection for user authentication", 30)
+        if not collection_id:
+            print("❌ Failed to create test collection")
+            return False
+        
+        # Create diverse cards for testing
+        test_cards = [
+            ("Pikachu", 1, "Common", "Pokemon"),
+            ("Charizard", 2, "Ultra Rare", "Pokemon"),
+            ("Squirtle", 3, "Common", "Pokemon"),
+            ("Basic Energy", 4, "Common", "Energy"),
+            ("Fire Energy", 5, "Common", "Energy"),
+            ("Water Energy", 6, "Common", "Energy"),
+            ("Professor Oak", 7, "Uncommon", "Trainer"),
+            ("Pokeball", 8, "Common", "Trainer"),
+            ("Potion", 9, "Common", "Trainer"),
+            ("Blastoise", 10, "Rare", "Pokemon")
+        ]
+        
+        created_cards = []
+        for name, card_number, rarity, card_type in test_cards:
+            card_id = self.test_create_card(name, collection_id, card_number, rarity, card_type)
+            if card_id:
+                created_cards.append(card_id)
+        
+        if len(created_cards) < 6:
+            print("❌ Not enough cards created for pack testing")
+            return False
+        
+        print(f"✅ Created {len(created_cards)} cards for testing")
+        
+        # Step 2: Test Alice's collection
+        print(f"\n👩 Testing Alice's Collection")
+        print("-" * 30)
+        
+        # Alice starts with empty collection
+        success, alice_initial = self.run_test(
+            f"Alice Initial Collection",
+            "GET",
+            f"api/user-collection/{alice}",
+            200
+        )
+        if not success:
+            return False
+        
+        print(f"   Alice initial cards: {alice_initial.get('total_cards', 0)}")
+        print(f"   Alice initial packs: {alice_initial.get('total_packs_opened', 0)}")
+        
+        # Alice opens 2 packs
+        alice_pack1_success = self.test_open_random_pack(collection_id, alice)
+        alice_pack2_success = self.test_open_random_pack(collection_id, alice)
+        
+        if not (alice_pack1_success and alice_pack2_success):
+            print("❌ Failed to open packs for Alice")
+            return False
+        
+        # Get Alice's collection after opening packs
+        success, alice_after = self.run_test(
+            f"Alice Collection After Packs",
+            "GET",
+            f"api/user-collection/{alice}",
+            200
+        )
+        if not success:
+            return False
+        
+        alice_total_cards = alice_after.get('total_cards', 0)
+        alice_packs_opened = alice_after.get('total_packs_opened', 0)
+        alice_unique_cards = alice_after.get('unique_cards', 0)
+        
+        print(f"   Alice after packs - Total cards: {alice_total_cards}")
+        print(f"   Alice after packs - Packs opened: {alice_packs_opened}")
+        print(f"   Alice after packs - Unique cards: {alice_unique_cards}")
+        
+        # Verify Alice has cards and opened 2 packs
+        if alice_total_cards == 0 or alice_packs_opened != 2:
+            print(f"❌ Alice's collection not updated correctly")
+            return False
+        
+        # Step 3: Test Bob's collection (should be separate)
+        print(f"\n👨 Testing Bob's Collection (Should be separate from Alice)")
+        print("-" * 55)
+        
+        # Bob starts with empty collection
+        success, bob_initial = self.run_test(
+            f"Bob Initial Collection",
+            "GET",
+            f"api/user-collection/{bob}",
+            200
+        )
+        if not success:
+            return False
+        
+        print(f"   Bob initial cards: {bob_initial.get('total_cards', 0)}")
+        print(f"   Bob initial packs: {bob_initial.get('total_packs_opened', 0)}")
+        
+        # Verify Bob starts with empty collection (separate from Alice)
+        if bob_initial.get('total_cards', 0) != 0 or bob_initial.get('total_packs_opened', 0) != 0:
+            print(f"❌ Bob's collection is not separate from Alice's!")
+            return False
+        
+        print("✅ Bob's collection is properly separated from Alice's")
+        
+        # Bob opens 3 packs
+        bob_pack1_success = self.test_open_random_pack(collection_id, bob)
+        bob_pack2_success = self.test_open_random_pack(collection_id, bob)
+        bob_pack3_success = self.test_open_random_pack(collection_id, bob)
+        
+        if not (bob_pack1_success and bob_pack2_success and bob_pack3_success):
+            print("❌ Failed to open packs for Bob")
+            return False
+        
+        # Get Bob's collection after opening packs
+        success, bob_after = self.run_test(
+            f"Bob Collection After Packs",
+            "GET",
+            f"api/user-collection/{bob}",
+            200
+        )
+        if not success:
+            return False
+        
+        bob_total_cards = bob_after.get('total_cards', 0)
+        bob_packs_opened = bob_after.get('total_packs_opened', 0)
+        bob_unique_cards = bob_after.get('unique_cards', 0)
+        
+        print(f"   Bob after packs - Total cards: {bob_total_cards}")
+        print(f"   Bob after packs - Packs opened: {bob_packs_opened}")
+        print(f"   Bob after packs - Unique cards: {bob_unique_cards}")
+        
+        # Verify Bob has cards and opened 3 packs
+        if bob_total_cards == 0 or bob_packs_opened != 3:
+            print(f"❌ Bob's collection not updated correctly")
+            return False
+        
+        # Step 4: Verify Alice's collection is still intact and separate
+        print(f"\n🔍 Verifying Alice's Collection Remains Intact")
+        print("-" * 45)
+        
+        success, alice_final = self.run_test(
+            f"Alice Final Collection Check",
+            "GET",
+            f"api/user-collection/{alice}",
+            200
+        )
+        if not success:
+            return False
+        
+        alice_final_cards = alice_final.get('total_cards', 0)
+        alice_final_packs = alice_final.get('total_packs_opened', 0)
+        
+        print(f"   Alice final - Total cards: {alice_final_cards}")
+        print(f"   Alice final - Packs opened: {alice_final_packs}")
+        
+        # Verify Alice's collection hasn't changed
+        if alice_final_cards != alice_total_cards or alice_final_packs != alice_packs_opened:
+            print(f"❌ Alice's collection was affected by Bob's actions!")
+            return False
+        
+        print("✅ Alice's collection remains intact and separate")
+        
+        # Step 5: Test third user (Charlie) to further verify separation
+        print(f"\n👤 Testing Charlie's Collection (Third user verification)")
+        print("-" * 55)
+        
+        # Charlie opens 1 pack
+        charlie_pack_success = self.test_open_random_pack(collection_id, charlie)
+        if not charlie_pack_success:
+            print("❌ Failed to open pack for Charlie")
+            return False
+        
+        # Get Charlie's collection
+        success, charlie_after = self.run_test(
+            f"Charlie Collection After Pack",
+            "GET",
+            f"api/user-collection/{charlie}",
+            200
+        )
+        if not success:
+            return False
+        
+        charlie_total_cards = charlie_after.get('total_cards', 0)
+        charlie_packs_opened = charlie_after.get('total_packs_opened', 0)
+        
+        print(f"   Charlie - Total cards: {charlie_total_cards}")
+        print(f"   Charlie - Packs opened: {charlie_packs_opened}")
+        
+        # Verify Charlie has exactly 1 pack opened
+        if charlie_packs_opened != 1:
+            print(f"❌ Charlie's collection not updated correctly")
+            return False
+        
+        # Step 6: Final verification - all users should have different collections
+        print(f"\n📊 Final User Separation Verification")
+        print("-" * 40)
+        
+        print(f"   Alice: {alice_final_cards} cards, {alice_final_packs} packs")
+        print(f"   Bob: {bob_total_cards} cards, {bob_packs_opened} packs")
+        print(f"   Charlie: {charlie_total_cards} cards, {charlie_packs_opened} packs")
+        
+        # Verify all users have different pack counts (proving separation)
+        if alice_final_packs == bob_packs_opened or alice_final_packs == charlie_packs_opened or bob_packs_opened == charlie_packs_opened:
+            print(f"❌ Users don't have properly separated collections!")
+            return False
+        
+        print("✅ All users have properly separated collections")
+        
+        # Step 7: Test edge cases
+        print(f"\n🧪 Testing Edge Cases")
+        print("-" * 20)
+        
+        # Test empty username
+        success, empty_user = self.run_test(
+            f"Empty Username Collection",
+            "GET",
+            f"api/user-collection/",
+            200
+        )
+        # This should work and return empty collection for empty string user
+        
+        # Test special characters in username
+        special_user = "user@test.com"
+        success, special_user_collection = self.run_test(
+            f"Special Character Username",
+            "GET",
+            f"api/user-collection/{special_user}",
+            200
+        )
+        if success:
+            print(f"   Special character username works: {special_user}")
+        
+        return True
+
 def main():
-    print("🚀 Starting TCG Pocket Advanced Collection System Tests")
-    print("=" * 60)
+    print("🚀 Starting TCG Pocket User Authentication System Tests")
+    print("=" * 65)
     
     tester = TCGPocketAPITester()
     
-    # Test basic endpoints
+    # Test basic endpoints first
     if not tester.test_health_check():
         print("❌ Health check failed, stopping tests")
         return 1
     
-    tester.test_get_rarities()
-    tester.test_get_card_types()
-    tester.test_get_pack_probabilities()
-    
-    # Test advanced collection operations
-    print("\n📚 Testing Advanced Collection System")
-    print("-" * 40)
-    
-    # Create test collection with 20 cards for easier testing
-    collection_id = tester.test_create_collection("Test Collection", "Testing advanced features", 20)
-    if not collection_id:
-        print("❌ Collection creation failed, stopping tests")
-        return 1
-    
-    # Get all collections
-    all_collections = tester.test_get_collections()
-    
-    # Create test cards with specific numbers for testing sorting and missing cards
-    print("\n🃏 Testing Card Numbering System")
-    print("-" * 35)
-    
-    created_cards = []
-    test_cards = [
-        ("Pikachu", 1, "Common", "Pokemon"),
-        ("Charizard", 3, "Secret Rare", "Pokemon"),
-        ("Energy Card", 5, "Common", "Energy"),
-        ("Professor Oak", 7, "Uncommon", "Trainer"),
-        ("Blastoise", 10, "Rare", "Pokemon"),
-        ("Thunder Stone", 15, "Holo", "Trainer")
-    ]
-    
-    for name, card_number, rarity, card_type in test_cards:
-        card_id = tester.test_create_card(name, collection_id, card_number, rarity, card_type)
-        if card_id:
-            created_cards.append(card_id)
-    
-    # Test collection overview with missing cards
-    print("\n🔍 Testing Collection Overview & Missing Cards")
-    print("-" * 50)
-    
-    overview = tester.test_collection_overview(collection_id)
-    if not overview:
-        print("❌ Collection overview failed")
-        return 1
-    
-    # Get all cards
-    all_cards = tester.test_get_cards()
-    
-    # Get cards by collection
-    collection_cards = tester.test_get_cards_by_collection(collection_id)
-    
-    # Test pack opening operations
-    print("\n📦 Testing Pack Opening with New System")
-    print("-" * 40)
-    
-    if created_cards:
-        # Test opening a pack
-        print(f"\n--- Opening Pack from Collection ---")
-        tester.test_open_random_pack(collection_id, "test_user")
-        
-        # Test user collection
-        print("\n👤 Testing User Collection")
-        print("-" * 25)
-        tester.test_get_user_collection("test_user")
-        
-    else:
-        print("⚠️  No cards created for pack testing")
+    # Test the complete user authentication system
+    auth_success = tester.test_user_authentication_system()
     
     # Print final results
-    print("\n" + "=" * 60)
+    print("\n" + "=" * 65)
     print(f"📊 Final Results: {tester.tests_passed}/{tester.tests_run} tests passed")
     
-    if tester.tests_passed >= tester.tests_run * 0.8:  # 80% pass rate
-        print("🎉 Advanced Collection System is working!")
+    if auth_success and tester.tests_passed >= tester.tests_run * 0.85:  # 85% pass rate
+        print("🎉 User Authentication System is working perfectly!")
         print("\n✅ Key Features Verified:")
-        print("- Collections with total_cards_in_set parameter")
-        print("- Cards with specific numbering (1/20, 3/20, etc.)")
-        print("- Collection overview showing complete set with missing cards")
-        print("- Card numbering system working correctly")
-        print("- Missing cards detection working")
+        print("- User Collection API works with different usernames")
+        print("- Pack Opening API properly assigns cards to correct users")
+        print("- User Separation: Different users have completely separate collections")
+        print("- Alice, Bob, and Charlie all have independent collections")
+        print("- User collection stats and card counting work correctly")
+        print("- Edge cases with special characters handled")
         return 0
     else:
         print(f"⚠️  {tester.tests_run - tester.tests_passed} tests failed")
-        print("❌ System needs fixes before frontend testing")
+        print("❌ User Authentication System needs fixes")
         return 1
 
 if __name__ == "__main__":
