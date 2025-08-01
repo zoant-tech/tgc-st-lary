@@ -936,7 +936,7 @@ function App() {
                     type="number"
                     min="1"
                     value={cardForm.card_number}
-                    onChange={(e) => setCardForm({...cardForm, card_number: parseInt(e.target.value)})}
+                    onChange={(e) => handleCardFormChange('card_number', parseInt(e.target.value))}
                     required
                   />
                 </div>
