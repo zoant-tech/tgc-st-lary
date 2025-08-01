@@ -391,20 +391,39 @@ async def open_pack(request: PackOpenRequest):
         energy_cards = [card for card in available_cards if card["card_type"] == "Energy"]
         
         pulled_cards = []
+        card_counts = {}  # Track how many times each card has been selected
+        
+        # Helper function to add card with duplicate limit
+        def add_card_with_limit(card, max_copies=2):
+            card_id = card["id"]
+            current_count = card_counts.get(card_id, 0)
+            if current_count < max_copies:
+                pulled_cards.append(card)
+                card_counts[card_id] = current_count + 1
+                return True
+            return False
+        
+        # Helper function to select random card from list with duplicate checking
+        def select_random_card_with_limit(card_list, max_attempts=50):
+            attempts = 0
+            while attempts < max_attempts and card_list:
+                selected_card = random.choice(card_list)
+                if add_card_with_limit(selected_card):
+                    return True
+                attempts += 1
+            return False
         
         # Guarantee 1 Energy card
         if energy_cards:
-            energy_card = random.choice(energy_cards)
-            pulled_cards.append(energy_card)
+            select_random_card_with_limit(energy_cards)
         elif available_cards:  # Fallback if no energy cards
-            pulled_cards.append(random.choice(available_cards))
+            select_random_card_with_limit(available_cards)
         
         # Guarantee 1 Trainer card
         if trainer_cards:
-            trainer_card = random.choice(trainer_cards)
-            pulled_cards.append(trainer_card)
+            select_random_card_with_limit(trainer_cards)
         elif available_cards:  # Fallback if no trainer cards
-            pulled_cards.append(random.choice(available_cards))
+            select_random_card_with_limit(available_cards)
         
         # Fill remaining 4 slots with random cards based on rarity probabilities
         remaining_slots = CARDS_PER_PACK - len(pulled_cards)
@@ -419,25 +438,38 @@ async def open_pack(request: PackOpenRequest):
         
         for _ in range(remaining_slots):
             # Generate random number to determine rarity based on probabilities
-            rand = random.random()
-            cumulative_prob = 0
-            selected_rarity = "Common"  # default fallback
+            attempts = 0
+            max_rarity_attempts = 20  # Try different rarities if duplicates are at limit
             
-            for rarity, prob in RARITY_PROBABILITIES.items():
-                cumulative_prob += prob
-                if rand <= cumulative_prob:
-                    selected_rarity = rarity
-                    break
+            while attempts < max_rarity_attempts:
+                rand = random.random()
+                cumulative_prob = 0
+                selected_rarity = "Common"  # default fallback
+                
+                for rarity, prob in RARITY_PROBABILITIES.items():
+                    cumulative_prob += prob
+                    if rand <= cumulative_prob:
+                        selected_rarity = rarity
+                        break
+                
+                # Try to select a card of the chosen rarity with duplicate limit
+                if selected_rarity in cards_by_rarity and cards_by_rarity[selected_rarity]:
+                    if select_random_card_with_limit(cards_by_rarity[selected_rarity]):
+                        break  # Successfully added a card
+                
+                # If we couldn't add a card of this rarity (due to duplicate limits), try again
+                attempts += 1
             
-            # Select a random card of the chosen rarity
-            if selected_rarity in cards_by_rarity and cards_by_rarity[selected_rarity]:
-                selected_card = random.choice(cards_by_rarity[selected_rarity])
-                pulled_cards.append(selected_card)
-            else:
-                # Fallback to any available card if selected rarity not available
-                if available_cards:
-                    selected_card = random.choice(available_cards)
-                    pulled_cards.append(selected_card)
+            # If we exhausted rarity attempts, try to add any available card
+            if attempts >= max_rarity_attempts:
+                # Find cards that are still under the limit
+                available_for_selection = [
+                    card for card in available_cards 
+                    if card_counts.get(card["id"], 0) < 2
+                ]
+                if available_for_selection:
+                    selected_card = random.choice(available_for_selection)
+                    add_card_with_limit(selected_card)
         
         # Add cards to user's collection
         await add_cards_to_collection(request.user_id, pulled_cards)
@@ -445,7 +477,11 @@ async def open_pack(request: PackOpenRequest):
         return {
             "message": "Pack opened successfully!",
             "collection_name": collection["name"],
-            "cards": pulled_cards
+            "cards": pulled_cards,
+            "pack_info": {
+                "total_cards": len(pulled_cards),
+                "duplicate_info": {card_id: count for card_id, count in card_counts.items() if count > 1}
+            }
         }
     
     except HTTPException:
