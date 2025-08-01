@@ -6,7 +6,7 @@ from datetime import datetime
 from PIL import Image
 
 class TCGPocketAPITester:
-    def __init__(self, base_url="https://21ddf9b2-cdac-4686-9a2d-50ead4150c5d.preview.emergentagent.com"):
+    def __init__(self, base_url="https://539a4b83-4cdf-429f-96e5-7480f8b042f9.preview.emergentagent.com"):
         self.base_url = base_url
         self.tests_run = 0
         self.tests_passed = 0
