@@ -910,7 +910,7 @@ function App() {
                   <Input
                     id="name"
                     value={cardForm.name}
-                    onChange={(e) => setCardForm({...cardForm, name: e.target.value})}
+                    onChange={(e) => handleCardFormChange('name', e.target.value)}
                     required
                   />
                 </div>
