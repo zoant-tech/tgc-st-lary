@@ -575,85 +575,128 @@ function App() {
   );
 
   // Card Modal for enlarged view
-  const CardModal = ({ card, onClose }) => (
-    <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
-      <div className="relative max-w-md w-full">
-        <button
-          onClick={onClose}
-          className="absolute -top-4 -right-4 bg-white rounded-full p-2 shadow-lg hover:shadow-xl transition-shadow z-10"
-        >
-          <X className="w-6 h-6 text-gray-600" />
-        </button>
-        <div className={`rounded-xl overflow-hidden border-4 ${RARITY_CONFIG[card.rarity]?.glow || 'shadow-gray-200'} shadow-2xl transform transition-all duration-300`}>
-          <div className="relative">
-            <img 
-              src={`${BACKEND_URL}${card.image_url}`} 
-              alt={card.name}
-              className="w-full h-96 object-cover"
-            />
-            <div className="absolute top-4 right-4">
-              <Badge className={`${RARITY_CONFIG[card.rarity]?.color || 'bg-gray-100'} flex items-center gap-1 text-lg px-3 py-1`}>
-                {RARITY_CONFIG[card.rarity]?.icon}
-                {card.rarity}
-              </Badge>
+  const CardModal = ({ card, onClose }) => {
+    const [imageError, setImageError] = useState(false);
+    
+    // Generate a color based on card rarity
+    const getRarityColor = (rarity) => {
+      const colors = {
+        'Common': '#94a3b8',
+        'Uncommon': '#22c55e', 
+        'Rare': '#3b82f6',
+        'Holo': '#8b5cf6',
+        'Ultra Rare': '#eab308',
+        'Secret Rare': '#ec4899'
+      };
+      return colors[rarity] || '#94a3b8';
+    };
+
+    // Create a large placeholder card design when image fails to load
+    const LargePlaceholderCard = () => (
+      <div 
+        className="w-full h-96 flex flex-col items-center justify-center text-white font-bold rounded-lg"
+        style={{ backgroundColor: getRarityColor(card.rarity) }}
+      >
+        <div className="text-center p-8">
+          <div className="text-4xl mb-4">{card.name}</div>
+          <div className="text-xl opacity-80 mb-2">{card.rarity}</div>
+          <div className="text-lg opacity-60 mb-4">{card.card_type}</div>
+          {card.hp && <div className="text-lg opacity-80 mb-2">HP: {card.hp}</div>}
+          {card.card_number && (
+            <div className="text-lg opacity-80 mt-4">
+              #{card.card_number}/{collectionOverview?.total_cards_in_set || 50}
             </div>
-            {card.card_number && (
-              <div className="absolute bottom-4 left-4">
-                <Badge className="bg-black bg-opacity-75 text-white text-lg px-3 py-1">
-                  {card.card_number}/{collectionOverview?.total_cards_in_set || 50}
+          )}
+        </div>
+      </div>
+    );
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+        <div className="relative max-w-md w-full">
+          <button
+            onClick={onClose}
+            className="absolute -top-4 -right-4 bg-white rounded-full p-2 shadow-lg hover:shadow-xl transition-shadow z-10"
+          >
+            <X className="w-6 h-6 text-gray-600" />
+          </button>
+          <div className={`rounded-xl overflow-hidden border-4 ${RARITY_CONFIG[card.rarity]?.glow || 'shadow-gray-200'} shadow-2xl transform transition-all duration-300`}>
+            <div className="relative">
+              {imageError || !card.image_url ? (
+                <LargePlaceholderCard />
+              ) : (
+                <img 
+                  src={card.image_url} 
+                  alt={card.name}
+                  className="w-full h-96 object-cover"
+                  onError={() => setImageError(true)}
+                  onLoad={() => setImageError(false)}
+                />
+              )}
+              <div className="absolute top-4 right-4">
+                <Badge className={`${RARITY_CONFIG[card.rarity]?.color || 'bg-gray-100'} flex items-center gap-1 text-lg px-3 py-1`}>
+                  {RARITY_CONFIG[card.rarity]?.icon}
+                  {card.rarity}
                 </Badge>
               </div>
-            )}
-          </div>
-          <div className="p-6 bg-white">
-            <h2 className="text-2xl font-bold mb-2">{card.name}</h2>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Type:</span>
-                <span>{card.card_type}</span>
+              {card.card_number && (
+                <div className="absolute bottom-4 left-4">
+                  <Badge className="bg-black bg-opacity-75 text-white text-lg px-3 py-1">
+                    {card.card_number}/{collectionOverview?.total_cards_in_set || 50}
+                  </Badge>
+                </div>
+              )}
+            </div>
+            <div className="p-6 bg-white">
+              <h2 className="text-2xl font-bold mb-2">{card.name}</h2>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Type:</span>
+                  <span>{card.card_type}</span>
+                </div>
+                {card.hp && (
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">HP:</span>
+                    <span>{card.hp}</span>
+                  </div>
+                )}
+                {card.attack_1 && (
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Attack 1:</span>
+                    <span>{card.attack_1}</span>
+                  </div>
+                )}
+                {card.attack_2 && (
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Attack 2:</span>
+                    <span>{card.attack_2}</span>
+                  </div>
+                )}
+                {card.weakness && (
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Weakness:</span>
+                    <span>{card.weakness}</span>
+                  </div>
+                )}
+                {card.resistance && (
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Resistance:</span>
+                    <span>{card.resistance}</span>
+                  </div>
+                )}
+                {card.description && (
+                  <div className="mt-4">
+                    <span className="font-medium">Description:</span>
+                    <p className="text-gray-600 mt-1">{card.description}</p>
+                  </div>
+                )}
               </div>
-              {card.hp && (
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">HP:</span>
-                  <span>{card.hp}</span>
-                </div>
-              )}
-              {card.attack_1 && (
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Attack 1:</span>
-                  <span>{card.attack_1}</span>
-                </div>
-              )}
-              {card.attack_2 && (
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Attack 2:</span>
-                  <span>{card.attack_2}</span>
-                </div>
-              )}
-              {card.weakness && (
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Weakness:</span>
-                  <span>{card.weakness}</span>
-                </div>
-              )}
-              {card.resistance && (
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Resistance:</span>
-                  <span>{card.resistance}</span>
-                </div>
-              )}
-              {card.description && (
-                <div className="mt-4">
-                  <span className="font-medium">Description:</span>
-                  <p className="text-gray-600 mt-1">{card.description}</p>
-                </div>
-              )}
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Admin Interface Tabs
   const AdminTabs = () => (
