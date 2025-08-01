@@ -1503,7 +1503,7 @@ function App() {
       {showWelcomeModal && (
         <WelcomeModal 
           tempUsername={tempUsername}
-          setTempUsername={setTempUsername}
+          onTempUsernameChange={handleTempUsernameChange}
           handleWelcomeSubmit={handleWelcomeSubmit}
         />
       )}
