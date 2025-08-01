@@ -879,7 +879,7 @@ function App() {
                   id="release-date"
                   type="date"
                   value={collectionForm.release_date}
-                  onChange={(e) => setCollectionForm({...collectionForm, release_date: e.target.value})}
+                  onChange={(e) => handleCollectionFormChange('release_date', e.target.value)}
                 />
               </div>
               <Button type="submit" disabled={loading} className="w-full">
