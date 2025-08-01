@@ -12,7 +12,6 @@ import { PlusCircle, Package, Sparkles, Star, Zap, Crown, Diamond, Settings, Tro
 import './App.css';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const USER_ID = "default_user"; // In a real app, this would come from authentication
 
 // Rarity configurations with icons and colors
 const RARITY_CONFIG = {
