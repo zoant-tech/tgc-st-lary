@@ -1012,7 +1012,10 @@ function App() {
                     <Input
                       placeholder="https://example.com/image.jpg"
                       value={cardForm.imageUrl || ''}
-                      onChange={(e) => setCardForm({...cardForm, imageUrl: e.target.value, image: null})}
+                      onChange={(e) => {
+                        handleCardFormChange('imageUrl', e.target.value);
+                        handleCardFormChange('image', null);
+                      }}
                     />
                     <div className="text-xs text-gray-500">
                       Use any image URL from the web (works in preview environments)
