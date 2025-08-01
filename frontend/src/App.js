@@ -24,7 +24,7 @@ const RARITY_CONFIG = {
 };
 
 // Welcome Modal Component (defined outside main component to prevent re-renders)
-const WelcomeModal = ({ tempUsername, setTempUsername, handleWelcomeSubmit }) => (
+const WelcomeModal = ({ tempUsername, onTempUsernameChange, handleWelcomeSubmit }) => (
   <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
     <div className="bg-white rounded-xl max-w-md w-full p-6">
       <div className="text-center mb-6">
@@ -46,7 +46,7 @@ const WelcomeModal = ({ tempUsername, setTempUsername, handleWelcomeSubmit }) =>
             id="username"
             placeholder="Enter your name..."
             value={tempUsername}
-            onChange={(e) => setTempUsername(e.target.value)}
+            onChange={(e) => onTempUsernameChange(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleWelcomeSubmit()}
             className="mt-1"
             autoFocus
