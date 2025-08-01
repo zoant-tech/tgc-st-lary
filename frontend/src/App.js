@@ -916,7 +916,7 @@ function App() {
                 </div>
                 <div>
                   <Label htmlFor="collection">Collection</Label>
-                  <Select value={cardForm.collection_id} onValueChange={(value) => setCardForm({...cardForm, collection_id: value})}>
+                  <Select value={cardForm.collection_id} onValueChange={(value) => handleCardFormChange('collection_id', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select collection" />
                     </SelectTrigger>
