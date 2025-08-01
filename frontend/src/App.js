@@ -63,7 +63,8 @@ function App() {
     resistance: '',
     description: '',
     set_name: '',
-    image: null
+    image: null,
+    imageUrl: ''
   });
 
   useEffect(() => {
