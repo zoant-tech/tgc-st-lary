@@ -193,6 +193,19 @@ function App() {
     setActiveTab('welcome');
   };
 
+  // Optimized form handlers to prevent input focus loss
+  const handleCollectionFormChange = useCallback((field, value) => {
+    setCollectionForm(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  const handleCardFormChange = useCallback((field, value) => {
+    setCardForm(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  const handleTempUsernameChange = useCallback((value) => {
+    setTempUsername(value);
+  }, []);
+
   const fetchUserCollection = async () => {
     if (!currentUser) return;
     
