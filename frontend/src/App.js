@@ -995,7 +995,8 @@ function App() {
                       accept="image/*"
                       onChange={(e) => {
                         console.log('File selected:', e.target.files[0]);
-                        setCardForm({...cardForm, image: e.target.files[0], imageUrl: ''});
+                        handleCardFormChange('image', e.target.files[0]);
+                        handleCardFormChange('imageUrl', '');
                       }}
                     />
                     {cardForm.image && (
