@@ -473,42 +473,84 @@ function App() {
     return sortCards(displayCards);
   };
 
-  const CardDisplay = ({ card, className = "", onClick }) => (
-    <div 
-      className={`relative group cursor-pointer transform transition-all duration-300 hover:scale-105 ${className}`}
-      onClick={onClick}
-    >
-      <div className={`rounded-xl overflow-hidden border-2 ${RARITY_CONFIG[card.rarity]?.glow || 'shadow-gray-200'} shadow-lg hover:shadow-xl transition-all duration-300`}>
-        <div className="relative">
-          <img 
-            src={`${BACKEND_URL}${card.image_url}`} 
-            alt={card.name}
-            className="w-full h-48 object-cover"
-          />
-          <div className="absolute top-2 right-2">
-            <Badge className={`${RARITY_CONFIG[card.rarity]?.color || 'bg-gray-100'} flex items-center gap-1`}>
-              {RARITY_CONFIG[card.rarity]?.icon}
-              {card.rarity}
-            </Badge>
-          </div>
+  const CardDisplay = ({ card, className = "", onClick }) => {
+    const [imageError, setImageError] = useState(false);
+    
+    // Generate a color based on card rarity
+    const getRarityColor = (rarity) => {
+      const colors = {
+        'Common': '#94a3b8',
+        'Uncommon': '#22c55e', 
+        'Rare': '#3b82f6',
+        'Holo': '#8b5cf6',
+        'Ultra Rare': '#eab308',
+        'Secret Rare': '#ec4899'
+      };
+      return colors[rarity] || '#94a3b8';
+    };
+
+    // Create a simple card design when image fails to load
+    const PlaceholderCard = () => (
+      <div 
+        className="w-full h-48 flex flex-col items-center justify-center text-white font-bold rounded-lg"
+        style={{ backgroundColor: getRarityColor(card.rarity) }}
+      >
+        <div className="text-center p-4">
+          <div className="text-lg mb-2">{card.name}</div>
+          <div className="text-sm opacity-80">{card.rarity}</div>
+          <div className="text-xs opacity-60 mt-1">{card.card_type}</div>
           {card.card_number && (
-            <div className="absolute bottom-2 left-2">
-              <Badge className="bg-black bg-opacity-75 text-white text-xs">
-                {card.card_number}/{collectionOverview?.total_cards_in_set || 50}
-              </Badge>
+            <div className="text-xs opacity-80 mt-2">
+              #{card.card_number}
             </div>
           )}
         </div>
-        <div className="p-3">
-          <h3 className="font-bold text-lg mb-1">{card.name}</h3>
-          <div className="flex justify-between items-center text-sm text-gray-600">
-            <span>{card.card_type}</span>
-            {card.hp && <span>HP: {card.hp}</span>}
+      </div>
+    );
+
+    return (
+      <div 
+        className={`relative group cursor-pointer transform transition-all duration-300 hover:scale-105 ${className}`}
+        onClick={onClick}
+      >
+        <div className={`rounded-xl overflow-hidden border-2 ${RARITY_CONFIG[card.rarity]?.glow || 'shadow-gray-200'} shadow-lg hover:shadow-xl transition-all duration-300`}>
+          <div className="relative">
+            {imageError || !card.image_url ? (
+              <PlaceholderCard />
+            ) : (
+              <img 
+                src={card.image_url} 
+                alt={card.name}
+                className="w-full h-48 object-cover"
+                onError={() => setImageError(true)}
+                onLoad={() => setImageError(false)}
+              />
+            )}
+            <div className="absolute top-2 right-2">
+              <Badge className={`${RARITY_CONFIG[card.rarity]?.color || 'bg-gray-100'} flex items-center gap-1`}>
+                {RARITY_CONFIG[card.rarity]?.icon}
+                {card.rarity}
+              </Badge>
+            </div>
+            {card.card_number && (
+              <div className="absolute bottom-2 left-2">
+                <Badge className="bg-black bg-opacity-75 text-white text-xs">
+                  {card.card_number}/{collectionOverview?.total_cards_in_set || 50}
+                </Badge>
+              </div>
+            )}
+          </div>
+          <div className="p-3">
+            <h3 className="font-bold text-lg mb-1">{card.name}</h3>
+            <div className="flex justify-between items-center text-sm text-gray-600">
+              <span>{card.card_type}</span>
+              {card.hp && <span>HP: {card.hp}</span>}
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Missing Card Display
   const MissingCardDisplay = ({ cardNumber, totalCards, className = "" }) => (
