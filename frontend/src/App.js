@@ -1468,8 +1468,7 @@ function App() {
     </Tabs>
   );
 
-  // User Interface Tabs
-  const UserTabs = () => (
+  return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
       <TabsList className="grid w-full grid-cols-3 bg-white rounded-xl p-1 shadow-sm">
         <TabsTrigger value="welcome" className="rounded-lg">Welcome</TabsTrigger>
