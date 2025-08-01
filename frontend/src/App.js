@@ -1087,7 +1087,7 @@ function App() {
           <div className="max-w-2xl mx-auto">
             <Gift className="w-24 h-24 mx-auto text-blue-500 mb-6" />
             <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Welcome to TCG Pocket!
+              Welcome to TCG Pocket, {currentUser}!
             </h2>
             <p className="text-xl text-gray-600 mb-8">
               Choose a collection and open random booster packs. Each pack contains 6 cards: 1 Energy, 1 Trainer, and 4 random cards with varying rarities!
