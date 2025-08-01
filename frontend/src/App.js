@@ -977,7 +977,7 @@ function App() {
                     id="hp"
                     type="number"
                     value={cardForm.hp}
-                    onChange={(e) => setCardForm({...cardForm, hp: e.target.value})}
+                    onChange={(e) => handleCardFormChange('hp', e.target.value)}
                   />
                 </div>
               </div>
