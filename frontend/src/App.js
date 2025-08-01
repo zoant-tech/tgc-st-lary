@@ -869,7 +869,7 @@ function App() {
                   max="500"
                   placeholder="50"
                   value={collectionForm.total_cards_in_set}
-                  onChange={(e) => setCollectionForm({...collectionForm, total_cards_in_set: e.target.value})}
+                  onChange={(e) => handleCollectionFormChange('total_cards_in_set', e.target.value)}
                   required
                 />
               </div>
