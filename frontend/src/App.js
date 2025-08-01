@@ -1487,7 +1487,13 @@ function App() {
       )}
 
       {/* Welcome Modal */}
-      {showWelcomeModal && <WelcomeModal />}
+      {showWelcomeModal && (
+        <WelcomeModal 
+          tempUsername={tempUsername}
+          setTempUsername={setTempUsername}
+          handleWelcomeSubmit={handleWelcomeSubmit}
+        />
+      )}
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
