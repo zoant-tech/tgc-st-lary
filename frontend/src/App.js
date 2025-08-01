@@ -650,9 +650,24 @@ function App() {
             <div className="p-6 bg-white">
               <h2 className="text-2xl font-bold mb-2">{card.name}</h2>
               <div className="space-y-2">
+                {card.card_number && (
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Card Number:</span>
+                    <span className="font-bold text-blue-600">
+                      {card.card_number}/{collectionOverview?.total_cards_in_set || 50}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Type:</span>
                   <span>{card.card_type}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Rarity:</span>
+                  <span className="flex items-center gap-1">
+                    {RARITY_CONFIG[card.rarity]?.icon}
+                    {card.rarity}
+                  </span>
                 </div>
                 {card.hp && (
                   <div className="flex justify-between items-center">
