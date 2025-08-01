@@ -856,7 +856,7 @@ function App() {
                   id="collection-description"
                   placeholder="Describe this collection..."
                   value={collectionForm.description}
-                  onChange={(e) => setCollectionForm({...collectionForm, description: e.target.value})}
+                  onChange={(e) => handleCollectionFormChange('description', e.target.value)}
                   required
                 />
               </div>
