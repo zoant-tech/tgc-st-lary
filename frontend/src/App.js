@@ -1490,7 +1490,14 @@ function App() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {isAdminMode ? <AdminTabs /> : <UserTabs />}
+        {currentUser ? (
+          isAdminMode ? <AdminTabs /> : <UserTabs />
+        ) : (
+          <div className="text-center py-12">
+            <Gift className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+            <p className="text-gray-600">Please enter your name to get started!</p>
+          </div>
+        )}
       </main>
     </div>
   );
