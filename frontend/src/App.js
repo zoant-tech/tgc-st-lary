@@ -23,6 +23,52 @@ const RARITY_CONFIG = {
   'Secret Rare': { icon: <Diamond className="w-4 h-4 text-pink-500" />, color: 'bg-pink-100 text-pink-800', glow: 'shadow-pink-200', sortOrder: 6 }
 };
 
+// Welcome Modal Component (defined outside main component to prevent re-renders)
+const WelcomeModal = ({ tempUsername, setTempUsername, handleWelcomeSubmit }) => (
+  <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div className="bg-white rounded-xl max-w-md w-full p-6">
+      <div className="text-center mb-6">
+        <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+          <Gift className="w-8 h-8 text-white" />
+        </div>
+        <h2 className="text-2xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          Welcome to TCG Pocket!
+        </h2>
+        <p className="text-gray-600">
+          Enter your name to start collecting cards and opening packs!
+        </p>
+      </div>
+      
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="username">Your Name</Label>
+          <Input
+            id="username"
+            placeholder="Enter your name..."
+            value={tempUsername}
+            onChange={(e) => setTempUsername(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleWelcomeSubmit()}
+            className="mt-1"
+            autoFocus
+          />
+        </div>
+        
+        <Button 
+          onClick={handleWelcomeSubmit}
+          disabled={!tempUsername.trim()}
+          className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+        >
+          Start Collecting!
+        </Button>
+      </div>
+      
+      <div className="mt-4 text-xs text-gray-500 text-center">
+        Your collection will be saved and you can return anytime with the same name.
+      </div>
+    </div>
+  </div>
+);
+
 function App() {
   // User authentication state
   const [currentUser, setCurrentUser] = useState('');
