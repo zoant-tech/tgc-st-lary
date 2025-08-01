@@ -69,6 +69,339 @@ const WelcomeModal = ({ tempUsername, onTempUsernameChange, handleWelcomeSubmit 
   </div>
 );
 
+// Admin Interface Tabs (moved outside to prevent re-renders)
+const AdminTabs = ({ 
+  activeTab, 
+  setActiveTab, 
+  collectionForm, 
+  handleCollectionFormChange, 
+  handleCollectionSubmit, 
+  loading,
+  cardForm,
+  handleCardFormChange,
+  handleCardSubmit,
+  collections,
+  cards,
+  handleDeleteCollection,
+  handleDeleteCard,
+  RARITY_CONFIG 
+}) => (
+  <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+    <TabsList className="grid w-full grid-cols-3 bg-white rounded-xl p-1 shadow-sm">
+      <TabsTrigger value="create-collection" className="rounded-lg">Create Collection</TabsTrigger>
+      <TabsTrigger value="create-card" className="rounded-lg">Create Card</TabsTrigger>
+      <TabsTrigger value="manage" className="rounded-lg">Manage Content</TabsTrigger>
+    </TabsList>
+
+    {/* Create Collection Tab */}
+    <TabsContent value="create-collection">
+      <Card className="max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Archive className="w-5 h-5" />
+            Create New Collection
+          </CardTitle>
+          <p className="text-sm text-gray-600">
+            Collections are like card sets (e.g., "Rubies", "Base Set"). Each collection has a set number of cards (e.g., 50 cards).
+          </p>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleCollectionSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="collection-name">Collection Name</Label>
+              <Input
+                id="collection-name"
+                placeholder="e.g., Rubies, Crystal Collection, Base Set"
+                value={collectionForm.name}
+                onChange={(e) => handleCollectionFormChange('name', e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="collection-description">Description</Label>
+              <Input
+                id="collection-description"
+                placeholder="Describe this collection..."
+                value={collectionForm.description}
+                onChange={(e) => handleCollectionFormChange('description', e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="total-cards">Total Cards in Set</Label>
+              <Input
+                id="total-cards"
+                type="number"
+                min="1"
+                max="500"
+                placeholder="50"
+                value={collectionForm.total_cards_in_set}
+                onChange={(e) => handleCollectionFormChange('total_cards_in_set', e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="release-date">Release Date (Optional)</Label>
+              <Input
+                id="release-date"
+                type="date"
+                value={collectionForm.release_date}
+                onChange={(e) => handleCollectionFormChange('release_date', e.target.value)}
+              />
+            </div>
+            <Button type="submit" disabled={loading} className="w-full">
+              {loading ? 'Creating...' : 'Create Collection'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </TabsContent>
+
+    {/* Create Card Tab */}
+    <TabsContent value="create-card">
+      <Card className="max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <PlusCircle className="w-5 h-5" />
+            Create New Card
+          </CardTitle>
+          <p className="text-sm text-gray-600">
+            Add cards to your collections. Each card gets a unique number (e.g., 1/50, 2/50, etc.).
+          </p>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleCardSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="name">Card Name</Label>
+                <Input
+                  id="name"
+                  value={cardForm.name}
+                  onChange={(e) => handleCardFormChange('name', e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="collection">Collection</Label>
+                <Select value={cardForm.collection_id} onValueChange={(value) => handleCardFormChange('collection_id', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select collection" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {collections.map(collection => (
+                      <SelectItem key={collection.id} value={collection.id}>
+                        {collection.name} ({collection.actual_cards || 0}/{collection.total_cards_in_set})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="card-number">Card Number</Label>
+                <Input
+                  id="card-number"
+                  type="number"
+                  min="1"
+                  value={cardForm.card_number}
+                  onChange={(e) => handleCardFormChange('card_number', parseInt(e.target.value))}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="rarity">Rarity</Label>
+                <Select value={cardForm.rarity} onValueChange={(value) => handleCardFormChange('rarity', value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.keys(RARITY_CONFIG).map(rarity => (
+                      <SelectItem key={rarity} value={rarity}>
+                        <div className="flex items-center gap-2">
+                          {RARITY_CONFIG[rarity].icon}
+                          {rarity}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="card_type">Card Type</Label>
+                <Select value={cardForm.card_type} onValueChange={(value) => handleCardFormChange('card_type', value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Pokemon">Pokemon</SelectItem>
+                    <SelectItem value="Trainer">Trainer</SelectItem>
+                    <SelectItem value="Energy">Energy</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="hp">HP (Optional)</Label>
+                <Input
+                  id="hp"
+                  type="number"
+                  value={cardForm.hp}
+                  onChange={(e) => handleCardFormChange('hp', e.target.value)}
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="image">Card Image</Label>
+              <Tabs defaultValue="file" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="file">Upload File</TabsTrigger>
+                  <TabsTrigger value="url">Use Image URL</TabsTrigger>
+                </TabsList>
+                <TabsContent value="file" className="space-y-2">
+                  <Input
+                    id="image"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      console.log('File selected:', e.target.files[0]);
+                      handleCardFormChange('image', e.target.files[0]);
+                      handleCardFormChange('imageUrl', '');
+                    }}
+                  />
+                  {cardForm.image && (
+                    <div className="text-sm text-green-600">
+                      ✅ File selected: {cardForm.image.name} ({Math.round(cardForm.image.size / 1024)} KB)
+                    </div>
+                  )}
+                  <div className="text-xs text-gray-500">
+                    Note: File uploads may not work in preview environments
+                  </div>
+                </TabsContent>
+                <TabsContent value="url" className="space-y-2">
+                  <Input
+                    placeholder="https://example.com/image.jpg"
+                    value={cardForm.imageUrl || ''}
+                    onChange={(e) => {
+                      handleCardFormChange('imageUrl', e.target.value);
+                      handleCardFormChange('image', null);
+                    }}
+                  />
+                  <div className="text-xs text-gray-500">
+                    Use any image URL from the web (works in preview environments)
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+            <Button type="submit" disabled={loading || !cardForm.collection_id} className="w-full">
+              {loading ? 'Creating...' : 'Create Card'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </TabsContent>
+
+    {/* Manage Content Tab */}
+    <TabsContent value="manage" className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Collections ({collections.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              {collections.map((collection) => (
+                <div key={collection.id} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Archive className="w-5 h-5 text-blue-500" />
+                        <h4 className="font-bold">{collection.name}</h4>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-2">{collection.description}</p>
+                      <Badge variant="secondary">
+                        {collection.actual_cards || 0}/{collection.total_cards_in_set} cards
+                      </Badge>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteCollection(collection.id, collection.name)}
+                      disabled={loading}
+                      className="ml-4"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              {collections.length === 0 && (
+                <p className="text-gray-500 text-center">No collections created yet</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>All Cards ({cards.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              {cards.map((card) => {
+                // Generate a color based on card rarity for admin thumbnails
+                const getRarityColor = (rarity) => {
+                  const colors = {
+                    'Common': '#94a3b8',
+                    'Uncommon': '#22c55e', 
+                    'Rare': '#3b82f6',
+                    'Holo': '#8b5cf6',
+                    'Ultra Rare': '#eab308',
+                    'Secret Rare': '#ec4899'
+                  };
+                  return colors[rarity] || '#94a3b8';
+                };
+
+                return (
+                  <div key={card.id} className="flex items-center gap-4 border rounded-lg p-3">
+                    <div 
+                      className="w-16 h-20 rounded flex items-center justify-center text-white text-xs font-bold"
+                      style={{ backgroundColor: getRarityColor(card.rarity) }}
+                    >
+                      <div className="text-center">
+                        <div className="text-xs">{card.name.substring(0, 8)}</div>
+                        <div className="text-xs opacity-75">#{card.card_number}</div>
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold">{card.name}</h4>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge className={`${RARITY_CONFIG[card.rarity]?.color || 'bg-gray-100'} flex items-center gap-1 text-xs`}>
+                          {RARITY_CONFIG[card.rarity]?.icon}
+                          {card.rarity}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">{card.card_type}</Badge>
+                        <Badge variant="outline" className="text-xs">#{card.card_number}</Badge>
+                      </div>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteCard(card.id, card.name)}
+                      disabled={loading}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                );
+              })}
+              {cards.length === 0 && (
+                <p className="text-gray-500 text-center">No cards created yet</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </TabsContent>
+  </Tabs>
+);
+
 function App() {
   // User authentication state
   const [currentUser, setCurrentUser] = useState('');
