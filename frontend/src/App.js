@@ -1466,6 +1466,9 @@ function App() {
         />
       )}
 
+      {/* Welcome Modal */}
+      {showWelcomeModal && <WelcomeModal />}
+
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
         {isAdminMode ? <AdminTabs /> : <UserTabs />}
