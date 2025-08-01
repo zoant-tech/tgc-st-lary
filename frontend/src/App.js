@@ -72,12 +72,25 @@ function App() {
   });
 
   useEffect(() => {
-    fetchCards();
-    fetchCollections();
-    if (!isAdminMode) {
-      fetchUserCollection();
+    // Check for existing user on app load
+    const savedUsername = localStorage.getItem('tcg-username');
+    if (savedUsername) {
+      setCurrentUser(savedUsername);
+    } else {
+      setShowWelcomeModal(true);
     }
-  }, [isAdminMode]);
+  }, []);
+
+  useEffect(() => {
+    // Only fetch data if user is logged in
+    if (currentUser) {
+      fetchCards();
+      fetchCollections();
+      if (!isAdminMode) {
+        fetchUserCollection();
+      }
+    }
+  }, [isAdminMode, currentUser]);
 
   useEffect(() => {
     // Reset to appropriate tab when switching modes
