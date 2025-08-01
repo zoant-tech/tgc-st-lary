@@ -739,9 +739,20 @@ function App() {
                   id="image"
                   type="file"
                   accept="image/*"
-                  onChange={(e) => setCardForm({...cardForm, image: e.target.files[0]})}
+                  onChange={(e) => {
+                    console.log('File selected:', e.target.files[0]);
+                    setCardForm({...cardForm, image: e.target.files[0]});
+                  }}
                   required
                 />
+                {cardForm.image && (
+                  <div className="mt-2 text-sm text-green-600">
+                    ✅ File selected: {cardForm.image.name} ({Math.round(cardForm.image.size / 1024)} KB)
+                  </div>
+                )}
+                <div className="mt-2 text-xs text-gray-500">
+                  Note: In preview environments, file uploads may have limitations. If file selection doesn't work, this is likely due to preview environment restrictions.
+                </div>
               </div>
               <Button type="submit" disabled={loading || !cardForm.collection_id} className="w-full">
                 {loading ? 'Creating...' : 'Create Card'}
