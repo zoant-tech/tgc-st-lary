@@ -492,7 +492,7 @@ function App() {
     // Create a simple card design when image fails to load
     const PlaceholderCard = () => (
       <div 
-        className="w-full h-48 flex flex-col items-center justify-center text-white font-bold rounded-lg"
+        className="w-full h-64 flex flex-col items-center justify-center text-white font-bold rounded-lg"
         style={{ backgroundColor: getRarityColor(card.rarity) }}
       >
         <div className="text-center p-4">
@@ -514,14 +514,14 @@ function App() {
         onClick={onClick}
       >
         <div className={`rounded-xl overflow-hidden border-2 ${RARITY_CONFIG[card.rarity]?.glow || 'shadow-gray-200'} shadow-lg hover:shadow-xl transition-all duration-300`}>
-          <div className="relative">
+          <div className="relative bg-gray-100">
             {imageError || !card.image_url ? (
               <PlaceholderCard />
             ) : (
               <img 
                 src={card.image_url} 
                 alt={card.name}
-                className="w-full h-48 object-cover"
+                className="w-full h-64 object-contain bg-white"
                 onError={() => setImageError(true)}
                 onLoad={() => setImageError(false)}
               />
