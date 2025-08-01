@@ -179,8 +179,8 @@ function App() {
 
   const handleCardSubmit = async (e) => {
     e.preventDefault();
-    if (!cardForm.image) {
-      alert('Please select an image for the card');
+    if (!cardForm.image && !cardForm.imageUrl) {
+      alert('Please select an image file or provide an image URL');
       return;
     }
     if (!cardForm.collection_id) {
@@ -190,40 +190,64 @@ function App() {
 
     setLoading(true);
     try {
-      const formData = new FormData();
-      Object.keys(cardForm).forEach(key => {
-        if (cardForm[key] !== null && cardForm[key] !== '') {
-          formData.append(key, cardForm[key]);
-        }
-      });
+      if (cardForm.imageUrl) {
+        // Handle URL-based image submission
+        const cardData = {
+          name: cardForm.name,
+          rarity: cardForm.rarity,
+          card_type: cardForm.card_type,
+          collection_id: cardForm.collection_id,
+          card_number: cardForm.card_number,
+          hp: cardForm.hp || null,
+          attack_1: cardForm.attack_1 || null,
+          attack_2: cardForm.attack_2 || null,
+          weakness: cardForm.weakness || null,
+          resistance: cardForm.resistance || null,
+          description: cardForm.description || null,
+          set_name: cardForm.set_name || null,
+          image_url: cardForm.imageUrl
+        };
 
-      const response = await fetch(`${BACKEND_URL}/api/cards`, {
-        method: 'POST',
-        body: formData
-      });
-
-      if (response.ok) {
-        setCardForm({
-          name: '',
-          rarity: 'Common',
-          card_type: 'Pokemon',
-          collection_id: '',
-          card_number: 1,
-          hp: '',
-          attack_1: '',
-          attack_2: '',
-          weakness: '',
-          resistance: '',
-          description: '',
-          set_name: '',
-          image: null
+        const response = await fetch(`${BACKEND_URL}/api/cards-from-url`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(cardData)
         });
-        fetchCards();
-        fetchCollections(); // Refresh to update card counts
-        alert('Card created successfully!');
+
+        if (response.ok) {
+          resetCardForm();
+          fetchCards();
+          fetchCollections();
+          alert('Card created successfully using image URL!');
+        } else {
+          const errorData = await response.json();
+          alert('Error creating card: ' + (errorData.detail || 'Unknown error'));
+        }
       } else {
-        const errorData = await response.json();
-        alert('Error creating card: ' + (errorData.detail || 'Unknown error'));
+        // Handle file upload submission
+        const formData = new FormData();
+        Object.keys(cardForm).forEach(key => {
+          if (cardForm[key] !== null && cardForm[key] !== '' && key !== 'imageUrl') {
+            formData.append(key, cardForm[key]);
+          }
+        });
+
+        const response = await fetch(`${BACKEND_URL}/api/cards`, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (response.ok) {
+          resetCardForm();
+          fetchCards();
+          fetchCollections();
+          alert('Card created successfully!');
+        } else {
+          const errorData = await response.json();
+          alert('Error creating card: ' + (errorData.detail || 'Unknown error'));
+        }
       }
     } catch (error) {
       console.error('Error creating card:', error);
@@ -231,6 +255,25 @@ function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const resetCardForm = () => {
+    setCardForm({
+      name: '',
+      rarity: 'Common',
+      card_type: 'Pokemon',
+      collection_id: '',
+      card_number: 1,
+      hp: '',
+      attack_1: '',
+      attack_2: '',
+      weakness: '',
+      resistance: '',
+      description: '',
+      set_name: '',
+      image: null,
+      imageUrl: ''
+    });
   };
 
   const handleDeleteCollection = async (collectionId, collectionName) => {
