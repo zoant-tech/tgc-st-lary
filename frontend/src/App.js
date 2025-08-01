@@ -594,7 +594,7 @@ function App() {
     // Create a large placeholder card design when image fails to load
     const LargePlaceholderCard = () => (
       <div 
-        className="w-full h-96 flex flex-col items-center justify-center text-white font-bold rounded-lg"
+        className="w-full h-[500px] flex flex-col items-center justify-center text-white font-bold rounded-lg"
         style={{ backgroundColor: getRarityColor(card.rarity) }}
       >
         <div className="text-center p-8">
@@ -621,14 +621,14 @@ function App() {
             <X className="w-6 h-6 text-gray-600" />
           </button>
           <div className={`rounded-xl overflow-hidden border-4 ${RARITY_CONFIG[card.rarity]?.glow || 'shadow-gray-200'} shadow-2xl transform transition-all duration-300`}>
-            <div className="relative">
+            <div className="relative bg-gray-100">
               {imageError || !card.image_url ? (
                 <LargePlaceholderCard />
               ) : (
                 <img 
                   src={card.image_url} 
                   alt={card.name}
-                  className="w-full h-96 object-cover"
+                  className="w-full h-[500px] object-contain bg-white"
                   onError={() => setImageError(true)}
                   onLoad={() => setImageError(false)}
                 />
