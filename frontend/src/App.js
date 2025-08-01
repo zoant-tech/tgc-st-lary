@@ -1848,7 +1848,26 @@ function App() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
         {currentUser ? (
-          isAdminMode ? <AdminTabs /> : <UserTabs />
+          isAdminMode ? (
+            <AdminTabs 
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              collectionForm={collectionForm}
+              handleCollectionFormChange={handleCollectionFormChange}
+              handleCollectionSubmit={handleCollectionSubmit}
+              loading={loading}
+              cardForm={cardForm}
+              handleCardFormChange={handleCardFormChange}
+              handleCardSubmit={handleCardSubmit}
+              collections={collections}
+              cards={cards}
+              handleDeleteCollection={handleDeleteCollection}
+              handleDeleteCard={handleDeleteCard}
+              RARITY_CONFIG={RARITY_CONFIG}
+            />
+          ) : (
+            <UserTabs />
+          )
         ) : (
           <div className="text-center py-12">
             <Gift className="w-16 h-16 mx-auto text-gray-400 mb-4" />
