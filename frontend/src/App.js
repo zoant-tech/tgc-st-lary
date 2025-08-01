@@ -735,24 +735,41 @@ function App() {
               </div>
               <div>
                 <Label htmlFor="image">Card Image</Label>
-                <Input
-                  id="image"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    console.log('File selected:', e.target.files[0]);
-                    setCardForm({...cardForm, image: e.target.files[0]});
-                  }}
-                  required
-                />
-                {cardForm.image && (
-                  <div className="mt-2 text-sm text-green-600">
-                    ✅ File selected: {cardForm.image.name} ({Math.round(cardForm.image.size / 1024)} KB)
-                  </div>
-                )}
-                <div className="mt-2 text-xs text-gray-500">
-                  Note: In preview environments, file uploads may have limitations. If file selection doesn't work, this is likely due to preview environment restrictions.
-                </div>
+                <Tabs defaultValue="file" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="file">Upload File</TabsTrigger>
+                    <TabsTrigger value="url">Use Image URL</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="file" className="space-y-2">
+                    <Input
+                      id="image"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        console.log('File selected:', e.target.files[0]);
+                        setCardForm({...cardForm, image: e.target.files[0], imageUrl: ''});
+                      }}
+                    />
+                    {cardForm.image && (
+                      <div className="text-sm text-green-600">
+                        ✅ File selected: {cardForm.image.name} ({Math.round(cardForm.image.size / 1024)} KB)
+                      </div>
+                    )}
+                    <div className="text-xs text-gray-500">
+                      Note: File uploads may not work in preview environments
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="url" className="space-y-2">
+                    <Input
+                      placeholder="https://example.com/image.jpg"
+                      value={cardForm.imageUrl || ''}
+                      onChange={(e) => setCardForm({...cardForm, imageUrl: e.target.value, image: null})}
+                    />
+                    <div className="text-xs text-gray-500">
+                      Use any image URL from the web (works in preview environments)
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </div>
               <Button type="submit" disabled={loading || !cardForm.collection_id} className="w-full">
                 {loading ? 'Creating...' : 'Create Card'}
