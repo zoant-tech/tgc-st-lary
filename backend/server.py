@@ -321,6 +321,24 @@ async def get_collection_overview(collection_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching collection overview: {str(e)}")
 
+@app.patch("/api/cards/{card_id}/image")
+async def update_card_image(card_id: str, image_data: dict):
+    try:
+        # Update the card's image URL
+        result = cards_collection.update_one(
+            {"id": card_id},
+            {"$set": {"image_url": image_data["image_url"]}}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Card not found")
+        
+        return {"message": "Card image updated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating card image: {str(e)}")
+
 @app.delete("/api/cards/{card_id}")
 async def delete_card(card_id: str):
     try:
