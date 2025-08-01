@@ -846,7 +846,7 @@ function App() {
                   id="collection-name"
                   placeholder="e.g., Rubies, Crystal Collection, Base Set"
                   value={collectionForm.name}
-                  onChange={(e) => setCollectionForm({...collectionForm, name: e.target.value})}
+                  onChange={(e) => handleCollectionFormChange('name', e.target.value)}
                   required
                 />
               </div>
