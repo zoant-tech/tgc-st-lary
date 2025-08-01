@@ -942,7 +942,7 @@ function App() {
                 </div>
                 <div>
                   <Label htmlFor="rarity">Rarity</Label>
-                  <Select value={cardForm.rarity} onValueChange={(value) => setCardForm({...cardForm, rarity: value})}>
+                  <Select value={cardForm.rarity} onValueChange={(value) => handleCardFormChange('rarity', value)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
